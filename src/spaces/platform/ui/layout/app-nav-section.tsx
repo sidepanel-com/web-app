@@ -20,6 +20,7 @@ import {
   SidebarMenuSubItem,
 } from "@/ui-primitives/ui/sidebar";
 import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
+import { type NavItem } from "../nav-types";
 
 const MENU_STATE_STORAGE_KEY = "sidebar_menu_state";
 
@@ -64,16 +65,7 @@ export function AppNavSection({
   items,
 }: {
   title: string;
-  items: {
-    title: string;
-    url: string;
-    icon?: LucideIcon;
-    isActive?: boolean;
-    items?: {
-      title: string;
-      url: string;
-    }[];
-  }[];
+  items: NavItem[];
 }) {
   const { tenant } = usePlatformTenant();
   const tenantSlug = tenant?.slug;
@@ -105,6 +97,21 @@ export function AppNavSection({
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
+          const hasSubItems = item.items && item.items.length > 0;
+
+          if (!hasSubItems) {
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild tooltip={item.title}>
+                  <Link href={`/${tenantSlug}${item.url}`}>
+                    {item.icon && <item.icon />}
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          }
+
           const isOpen = menuStates[item.title] ?? item.isActive ?? false;
           return (
             <Collapsible

@@ -1,0 +1,33 @@
+# Project Guidelines for Coding Agents
+
+You are working on a multi-tenant platform built with Next.js, Drizzle ORM, and Supabase.
+
+## Architecture: Spaces and Schemas
+
+The project is strictly divided into **Platform** and **Product** spaces.
+
+### 1. The Platform Space (`src/spaces/platform/`, `db/platform/`)
+- Contains core infrastructure: Auth, Multi-tenancy, User management, Billing.
+- **DO NOT MODIFY** files in these directories unless explicitly instructed.
+- If you need a platform-level change, suggest it rather than implementing it.
+
+### 2. The Product Space (`src/spaces/product/`, `db/product/`)
+- This is your primary area of contribution.
+- Add new features, UI components, hooks, and database tables here.
+- Follow the patterns established in `src/spaces/product/README.md` and `db/product/README.md`.
+
+## Database Guidelines (Drizzle + Supabase)
+- All new tables must go into the `product` schema in `db/product/schema.ts`.
+- Every product table **MUST** have a `tenant_id` column and foreign key to `platform.tenants`.
+- Use `npm run db:generate` to create migrations.
+
+## UI Guidelines
+- Use `@/ui-primitives/ui/*` for base components (Shadcn UI).
+- Wrap all tenant-specific pages in `src/pages/[tenantSlug]/` with the `<AppPage>` component.
+- Add new navigation items to `src/spaces/product/navigation.tsx`.
+
+## Coding Standards
+- Follow Biome linting/formatting rules (`npm run lint`, `npm run format`).
+- Use TypeScript strictly.
+- Prefer functional components and React hooks.
+
