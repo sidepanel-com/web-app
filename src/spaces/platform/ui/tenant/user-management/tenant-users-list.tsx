@@ -298,35 +298,49 @@ export function TenantUsersList({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          {user.status === "pending" && onResendInvitation && (
+                          {user.status === "pending" ? (
                             <>
-                              <DropdownMenuItem
-                                onClick={() => onResendInvitation(user.id)}
-                              >
-                                <MailIcon className="mr-2 h-4 w-4" />
-                                Resend Invitation
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                            </>
-                          )}
-                          {canManageUser(currentUserRole, user.role) && (
-                            <>
-                              {onEditUser && (
+                              {onResendInvitation && (
                                 <DropdownMenuItem
-                                  onClick={() => onEditUser(user.id)}
+                                  onClick={() => onResendInvitation(user.id)}
                                 >
-                                  <EditIcon className="mr-2 h-4 w-4" />
-                                  Edit Role
+                                  <MailIcon className="mr-2 h-4 w-4" />
+                                  Resend Invitation
                                 </DropdownMenuItem>
                               )}
-                              {onRemoveUser && user.role !== "owner" && (
+                              <DropdownMenuSeparator />
+                              {onRemoveUser && (
                                 <DropdownMenuItem
                                   onClick={() => onRemoveUser(user.id)}
                                   className="text-destructive"
                                 >
                                   <TrashIcon className="mr-2 h-4 w-4" />
-                                  Remove User
+                                  Cancel Invitation
                                 </DropdownMenuItem>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {canManageUser(currentUserRole, user.role) && (
+                                <>
+                                  {onEditUser && (
+                                    <DropdownMenuItem
+                                      onClick={() => onEditUser(user.id)}
+                                    >
+                                      <EditIcon className="mr-2 h-4 w-4" />
+                                      Edit Role
+                                    </DropdownMenuItem>
+                                  )}
+                                  {onRemoveUser && user.role !== "owner" && (
+                                    <DropdownMenuItem
+                                      onClick={() => onRemoveUser(user.id)}
+                                      className="text-destructive"
+                                    >
+                                      <TrashIcon className="mr-2 h-4 w-4" />
+                                      Remove User
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
                               )}
                             </>
                           )}

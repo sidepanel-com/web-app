@@ -109,17 +109,42 @@ export function useTenantUsers() {
     [tenantSdk, loadUsers],
   );
 
-  const resendInvitation = useCallback(async (userId: string) => {
-    // Implement if API supports, or use inviteUser again if appropriate
-    console.log("Resend invitation not implemented in SDK yet");
-    toast.info("Resend invitation feature pending");
-  }, []);
+  const resendInvitation = useCallback(
+    async (invitationId: string) => {
+      if (!tenantSdk) return;
+      try {
+        setLoading(true);
+        await tenantSdk.tenantInvitations.resendInvitation(invitationId);
+        toast.success("Invitation resent successfully");
+        await loadUsers();
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to resend invitation";
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tenantSdk, loadUsers],
+  );
 
   const cancelInvitation = useCallback(
-    async (userId: string) => {
-      await removeUser(userId);
+    async (invitationId: string) => {
+      if (!tenantSdk) return;
+      try {
+        setLoading(true);
+        await tenantSdk.tenantInvitations.cancelInvitation(invitationId);
+        toast.success("Invitation cancelled");
+        await loadUsers();
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to cancel invitation";
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
     },
-    [removeUser],
+    [tenantSdk, loadUsers],
   );
 
   return {

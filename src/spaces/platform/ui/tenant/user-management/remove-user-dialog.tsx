@@ -101,17 +101,20 @@ export function RemoveUserDialog({
     user.email,
   );
 
+  const isPending = user.status === "pending";
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <TrashIcon className="h-5 w-5" />
-            Remove Team Member
+            {isPending ? "Cancel Invitation" : "Remove Team Member"}
           </DialogTitle>
           <DialogDescription>
-            This action cannot be undone. The user will lose access to this
-            tenant immediately.
+            {isPending
+              ? "This will cancel the pending invitation. The user will not be able to join the team using the previously sent link."
+              : "This action cannot be undone. The user will lose access to this tenant immediately."}
           </DialogDescription>
         </DialogHeader>
 
@@ -137,17 +140,21 @@ export function RemoveUserDialog({
         </div>
 
         {/* Warning */}
-        <Alert variant="destructive">
-          <AlertTriangleIcon className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Warning:</strong> Removing {displayName} will:
-            <ul className="mt-2 list-disc list-inside space-y-1 text-sm">
-              <li>Immediately revoke their access to this tenant</li>
-              <li>Remove them from all tenant-specific content and settings</li>
-              <li>Cancel any pending invitations they may have sent</li>
-            </ul>
-          </AlertDescription>
-        </Alert>
+        {!isPending && (
+          <Alert variant="destructive">
+            <AlertTriangleIcon className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Warning:</strong> Removing {displayName} will:
+              <ul className="mt-2 list-disc list-inside space-y-1 text-sm">
+                <li>Immediately revoke their access to this tenant</li>
+                <li>
+                  Remove them from all tenant-specific content and settings
+                </li>
+                <li>Cancel any pending invitations they may have sent</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {error && (
           <Alert variant="destructive">
@@ -170,7 +177,13 @@ export function RemoveUserDialog({
             onClick={handleRemove}
             disabled={isLoading}
           >
-            {isLoading ? "Removing..." : "Remove User"}
+            {isLoading
+              ? isPending
+                ? "Cancelling..."
+                : "Removing..."
+              : isPending
+                ? "Cancel Invitation"
+                : "Remove User"}
           </Button>
         </DialogFooter>
       </DialogContent>

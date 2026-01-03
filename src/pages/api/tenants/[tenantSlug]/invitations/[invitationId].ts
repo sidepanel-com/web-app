@@ -19,18 +19,14 @@ const schemas = {
 
 const handlers: TenantApiHandlers<typeof schemas> = {
   // Resend invitation
-  POST: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId }) => {
+  POST: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
-    const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
-      apiUser.id,
-      tenantId
-    );
+    const tempTenantService = TenantService.create(db, apiUser.id, tenantId);
     const userRole = await tempTenantService.getUserRoleInTenant(tenantId);
 
     // Create invitation service with full context
     const invitationService = TenantUserInvitationService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId,
       userRole || "viewer"
@@ -51,18 +47,14 @@ const handlers: TenantApiHandlers<typeof schemas> = {
   },
 
   // Cancel/delete invitation
-  DELETE: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId }) => {
+  DELETE: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
-    const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
-      apiUser.id,
-      tenantId
-    );
+    const tempTenantService = TenantService.create(db, apiUser.id, tenantId);
     const userRole = await tempTenantService.getUserRoleInTenant(tenantId);
 
     // Create invitation service with full context
     const invitationService = TenantUserInvitationService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId,
       userRole || "viewer"

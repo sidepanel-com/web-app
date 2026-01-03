@@ -78,9 +78,7 @@ export function TenantUsersContainer() {
       const user = users.find((u) => u.id === userId);
       if (!user) return;
 
-      // Note: This would need to be implemented in the API
-      // For now, we'll show a toast
-      toast.success(`A new invitation has been sent to ${user.email}`);
+      await resendInvitation(userId);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "An error occurred");
     }
@@ -99,8 +97,12 @@ export function TenantUsersContainer() {
 
   const handleRemoveSuccess = async (userId: string) => {
     try {
-      await removeUser(userId);
-      toast.success("The user has been successfully removed from the team");
+      const user = users.find((u) => u.id === userId);
+      if (user?.status === "pending") {
+        await cancelInvitation(userId);
+      } else {
+        await removeUser(userId);
+      }
       setRemoveUserDialogOpen(false);
       setSelectedUser(null);
       loadUsers();
@@ -155,13 +157,18 @@ export function TenantUsersContainer() {
         isLoading={loading}
         currentUserRole="admin" // TODO: Get from context/session
       />
-      {/*
       <EditUserRoleDialog
         open={editUserDialogOpen}
         onOpenChange={setEditUserDialogOpen}
         user={selectedUser}
-        tenantSlug={tenantSlug}
-        onSuccess={handleEditSuccess}
+        onUpdateUser={async (userId, data) => {
+          if (data.role) {
+            await updateUserRole(userId, data.role);
+            handleEditSuccess();
+          }
+        }}
+        isLoading={loading}
+        currentUserRole="admin" // TODO: Get from context/session
       />
 
       <RemoveUserDialog
@@ -169,7 +176,8 @@ export function TenantUsersContainer() {
         onOpenChange={setRemoveUserDialogOpen}
         user={selectedUser}
         onRemoveUser={handleRemoveSuccess}
-      /> */}
+        isLoading={loading}
+      />
     </div>
   );
 }

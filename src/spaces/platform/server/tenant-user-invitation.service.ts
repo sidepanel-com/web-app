@@ -1,4 +1,3 @@
-
 import { and, eq, sql, desc, lt } from "drizzle-orm";
 import { InferSelectModel } from "drizzle-orm";
 import { BaseEntityService, PermissionContext } from "./base-entity.service";
@@ -32,11 +31,7 @@ export interface InvitationWithDetails extends TenantInvitation {
 }
 
 export class TenantUserInvitationService extends BaseEntityService {
-
-  constructor(
-    db: any,
-    permissionContext: PermissionContext
-  ) {
+  constructor(db: any, permissionContext: PermissionContext) {
     super(db, permissionContext);
   }
 
@@ -103,26 +98,26 @@ export class TenantUserInvitationService extends BaseEntityService {
 
     // If schema requires profileId, we must provide it.
     // If user doesn't exist, we can't provide it.
-    // For now, assuming Drizzle schema `uuid('profile_id').notNull()` is correct, 
+    // For now, assuming Drizzle schema `uuid('profile_id').notNull()` is correct,
     // it implies we can ONLY invite existing users.
-    // BUT original code didn't use it. 
+    // BUT original code didn't use it.
     // We'll pass it if found, else undefined (and hope DB allows null or we made a mistake reading schema intent).
-    // Note: If the DB actually enforces NOT NULL, this will fail for new users. 
+    // Note: If the DB actually enforces NOT NULL, this will fail for new users.
     // Ideally we should create a stub profile or inviteUserByEmail first to generate a user.
     // But inviteUserByEmail creates an auth user, not a profile (unless trigger).
-    
+
     // We will proceed with insert.
     const values: any = {
-        tenantId: this.permissionContext.tenantId!,
-        email: invitationData.email.toLowerCase(),
-        role: invitationData.role,
-        token,
-        expiresAt: expiresAt.toISOString(),
-        invitedBy: inviterTenantUser.profileId,
-        status: "pending",
+      tenantId: this.permissionContext.tenantId!,
+      email: invitationData.email.toLowerCase(),
+      role: invitationData.role,
+      token,
+      expiresAt: expiresAt.toISOString(),
+      invitedBy: inviterTenantUser.profileId,
+      status: "pending",
     };
     if (existingProfile) {
-        values.profileId = existingProfile.id;
+      values.profileId = existingProfile.id;
     }
 
     const [invitation] = await this.db
@@ -149,7 +144,7 @@ export class TenantUserInvitationService extends BaseEntityService {
         invitation: tenantInvitations,
         inviterUser: tenantUsers,
         inviterProfile: userProfiles,
-        tenant: tenants
+        tenant: tenants,
       })
       .from(tenantInvitations)
       .leftJoin(tenantUsers, eq(tenantInvitations.invitedBy, tenantUsers.id))
@@ -160,14 +155,19 @@ export class TenantUserInvitationService extends BaseEntityService {
 
     return results.map(({ invitation, inviterProfile, tenant }) => ({
       ...invitation,
-      invited_by_user: inviterProfile ? {
-        first_name: inviterProfile.displayName?.split(' ')[0] || null,
-        last_name: inviterProfile.displayName?.split(' ').slice(1).join(' ') || null,
-      } : undefined,
-      tenant: tenant ? {
-        name: tenant.name,
-        slug: tenant.slug,
-      } : undefined,
+      invited_by_user: inviterProfile
+        ? {
+            first_name: inviterProfile.displayName?.split(" ")[0] || null,
+            last_name:
+              inviterProfile.displayName?.split(" ").slice(1).join(" ") || null,
+          }
+        : undefined,
+      tenant: tenant
+        ? {
+            name: tenant.name,
+            slug: tenant.slug,
+          }
+        : undefined,
     }));
   }
 
@@ -182,7 +182,7 @@ export class TenantUserInvitationService extends BaseEntityService {
         invitation: tenantInvitations,
         inviterUser: tenantUsers,
         inviterProfile: userProfiles,
-        tenant: tenants
+        tenant: tenants,
       })
       .from(tenantInvitations)
       .leftJoin(tenantUsers, eq(tenantInvitations.invitedBy, tenantUsers.id))
@@ -190,8 +190,8 @@ export class TenantUserInvitationService extends BaseEntityService {
       .leftJoin(tenants, eq(tenantInvitations.tenantId, tenants.id))
       .where(
         and(
-            eq(tenantInvitations.token, token),
-            eq(tenantInvitations.status, "pending")
+          eq(tenantInvitations.token, token),
+          eq(tenantInvitations.status, "pending")
         )
       )
       .limit(1);
@@ -208,14 +208,19 @@ export class TenantUserInvitationService extends BaseEntityService {
 
     return {
       ...invitation,
-      invited_by_user: inviterProfile ? {
-        first_name: inviterProfile.displayName?.split(' ')[0] || null,
-        last_name: inviterProfile.displayName?.split(' ').slice(1).join(' ') || null,
-      } : undefined,
-      tenant: tenant ? {
-        name: tenant.name,
-        slug: tenant.slug,
-      } : undefined,
+      invited_by_user: inviterProfile
+        ? {
+            first_name: inviterProfile.displayName?.split(" ")[0] || null,
+            last_name:
+              inviterProfile.displayName?.split(" ").slice(1).join(" ") || null,
+          }
+        : undefined,
+      tenant: tenant
+        ? {
+            name: tenant.name,
+            slug: tenant.slug,
+          }
+        : undefined,
     };
   }
 
@@ -234,7 +239,7 @@ export class TenantUserInvitationService extends BaseEntityService {
       .from(userProfiles)
       .where(eq(userProfiles.userId, userId))
       .limit(1);
-    
+
     if (!userProfile) throw new Error("User profile not found");
 
     // Check if user is already a member
@@ -243,16 +248,16 @@ export class TenantUserInvitationService extends BaseEntityService {
       .from(tenantUsers)
       .where(
         and(
-            eq(tenantUsers.tenantId, invitation.tenantId),
-            eq(tenantUsers.profileId, userProfile.id)
+          eq(tenantUsers.tenantId, invitation.tenantId),
+          eq(tenantUsers.profileId, userProfile.id)
         )
       )
       .limit(1);
 
     if (existingUser) {
-       // Already a member, just update invitation status
-       await this.updateInvitationStatus(invitation.id, "accepted");
-       return;
+      // Already a member, just update invitation status
+      await this.updateInvitationStatus(invitation.id, "accepted");
+      return;
     }
 
     // Create tenant_user record
@@ -261,7 +266,7 @@ export class TenantUserInvitationService extends BaseEntityService {
       profileId: userProfile.id,
       role: invitation.role,
       invitedBy: invitation.invitedBy,
-      invitedByEmail: invitation.invitedByEmail, 
+      invitedByEmail: invitation.invitedByEmail,
       status: "active",
       // createdAt default
     });
@@ -276,9 +281,9 @@ export class TenantUserInvitationService extends BaseEntityService {
   async declineInvitation(token: string): Promise<void> {
     const invitation = await this.getInvitationByToken(token);
     if (!invitation) {
-        // Technically strict, but maybe they already declined?
-        // Just return if not found or expired
-        return;
+      // Technically strict, but maybe they already declined?
+      // Just return if not found or expired
+      return;
     }
     await this.updateInvitationStatus(invitation.id, "declined");
   }
@@ -296,14 +301,15 @@ export class TenantUserInvitationService extends BaseEntityService {
       .from(tenantInvitations)
       .where(
         and(
-            eq(tenantInvitations.id, invitationId),
-            eq(tenantInvitations.tenantId, this.permissionContext.tenantId!)
+          eq(tenantInvitations.id, invitationId),
+          eq(tenantInvitations.tenantId, this.permissionContext.tenantId!)
         )
       )
       .limit(1);
 
     if (!invitation) throw new Error("Invitation not found");
-    if (invitation.status !== "pending") throw new Error("Can only resend pending invitations");
+    if (invitation.status !== "pending")
+      throw new Error("Can only resend pending invitations");
 
     // Generate new token
     const newToken = this.generateInvitationToken();
@@ -336,8 +342,8 @@ export class TenantUserInvitationService extends BaseEntityService {
       .delete(tenantInvitations)
       .where(
         and(
-            eq(tenantInvitations.id, invitationId),
-            eq(tenantInvitations.tenantId, this.permissionContext.tenantId!)
+          eq(tenantInvitations.id, invitationId),
+          eq(tenantInvitations.tenantId, this.permissionContext.tenantId!)
         )
       );
   }
@@ -357,9 +363,9 @@ export class TenantUserInvitationService extends BaseEntityService {
     }
 
     const invitations = await this.db
-        .select({ status: tenantInvitations.status })
-        .from(tenantInvitations)
-        .where(eq(tenantInvitations.tenantId, this.permissionContext.tenantId!));
+      .select({ status: tenantInvitations.status })
+      .from(tenantInvitations)
+      .where(eq(tenantInvitations.tenantId, this.permissionContext.tenantId!));
 
     const stats = {
       total: invitations.length,
@@ -370,9 +376,9 @@ export class TenantUserInvitationService extends BaseEntityService {
     };
 
     invitations.forEach((inv) => {
-        if (inv.status && stats[inv.status as keyof typeof stats] !== undefined) {
-            stats[inv.status as keyof typeof stats]++;
-        }
+      if (inv.status && stats[inv.status as keyof typeof stats] !== undefined) {
+        stats[inv.status as keyof typeof stats]++;
+      }
     });
 
     return stats;
@@ -389,8 +395,8 @@ export class TenantUserInvitationService extends BaseEntityService {
       .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
       .where(
         and(
-            eq(tenantUsers.tenantId, this.permissionContext.tenantId!),
-            eq(userProfiles.email, email.toLowerCase())
+          eq(tenantUsers.tenantId, this.permissionContext.tenantId!),
+          eq(userProfiles.email, email.toLowerCase())
         )
       )
       .limit(1);
@@ -406,13 +412,13 @@ export class TenantUserInvitationService extends BaseEntityService {
       .from(tenantInvitations)
       .where(
         and(
-            eq(tenantInvitations.tenantId, this.permissionContext.tenantId!),
-            eq(tenantInvitations.email, email.toLowerCase()),
-            eq(tenantInvitations.status, "pending")
+          eq(tenantInvitations.tenantId, this.permissionContext.tenantId!),
+          eq(tenantInvitations.email, email.toLowerCase()),
+          eq(tenantInvitations.status, "pending")
         )
       )
       .limit(1);
-    
+
     return invitation || null;
   }
 
@@ -420,20 +426,20 @@ export class TenantUserInvitationService extends BaseEntityService {
     // Need to find tenantUser for current userId
     // Join tenantUsers -> userProfiles where userProfiles.userId = this.userId
     const [inviter] = await this.db
-      .select({ 
+      .select({
         id: tenantUsers.id,
-        profileId: tenantUsers.profileId 
+        profileId: tenantUsers.profileId,
       })
       .from(tenantUsers)
       .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
       .where(
         and(
-            eq(tenantUsers.tenantId, this.permissionContext.tenantId!),
-            eq(userProfiles.userId, this.permissionContext.userId)
+          eq(tenantUsers.tenantId, this.permissionContext.tenantId!),
+          eq(userProfiles.userId, this.permissionContext.userId)
         )
       )
       .limit(1);
-    
+
     return inviter;
   }
 
@@ -462,6 +468,7 @@ export class TenantUserInvitationService extends BaseEntityService {
     customMessage?: string
   ): Promise<void> {
     // Placeholder
+    // TODO: use supabase user invitation email
     console.log("Sending invitation email to:", invitation.email);
     console.log("Token:", invitation.token);
   }
