@@ -1,5 +1,6 @@
-import { Tables } from "@/types/database.types";
+
 import { ApiClient, ApiResponse } from "./index";
+import type { Tenant } from "@db/platform/types";
 
 export class UserTenantsClientAPI {
   private fetchClient: ApiClient;
@@ -13,11 +14,11 @@ export class UserTenantsClientAPI {
       name: tenantName,
     });
 
-    return response as ApiResponse<Tables<"tenants">>;
+    return response as ApiResponse<Tenant>;
   }
 
   async getTenants() {
     const response = await this.fetchClient.get("/user/tenants");
-    return response as ApiResponse<Tables<"tenants">[]>;
+    return response as ApiResponse<Tenant[]>;
   }
 }

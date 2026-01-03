@@ -15,10 +15,10 @@ const schemas = {
 };
 
 const handlers: TenantApiHandlers<typeof schemas> = {
-  GET: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId }) => {
+  GET: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId
     );
@@ -26,7 +26,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     // Create tenant service instance with full context including role
     const tenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId,
       userRole || undefined
@@ -35,10 +35,10 @@ const handlers: TenantApiHandlers<typeof schemas> = {
     // Get tenant with permission checking
     return await tenantService.getTenantById(tenantId);
   },
-  PATCH: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId }) => {
+  PATCH: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId
     );
@@ -46,7 +46,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     // Create tenant service instance with full context including role
     const tenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId,
       userRole || undefined
@@ -59,10 +59,10 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     return tenant;
   },
-  DELETE: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId }) => {
+  DELETE: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId
     );
@@ -70,7 +70,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     // Create tenant service instance with full context including role
     const tenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId,
       userRole || undefined

@@ -60,6 +60,7 @@ export function PlatformUserProvider({
       if (!session?.access_token) {
         setUserSdk(null);
         setAvailableTenants([]);
+        setUser(null);
         setIsLoading(false);
         return;
       }
@@ -70,6 +71,18 @@ export function PlatformUserProvider({
           accessToken: session.access_token,
         });
         setUserSdk(_userSdk);
+
+        // Populate user from session
+        if (session.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || "",
+            // Add other fields as needed from session user_metadata
+            displayName:
+              session.user.user_metadata?.full_name || session.user.email,
+          });
+        }
+
         setError(null);
       } catch (err) {
         setError(err as Error);
@@ -84,19 +97,22 @@ export function PlatformUserProvider({
   // Load available tenants when SDK is ready
   const loadAvailableTenants = useCallback(async () => {
     setTenantsLoading(true);
-    if (!userSdk) return;
+    if (!userSdk) {
+      setTenantsLoading(false);
+      return;
+    }
 
     try {
       const response = await userSdk.userTenants.getTenants();
       if (response?.error) {
         setError(new Error(response.error));
       } else {
-        setAvailableTenants(response?.data || []);
+        setAvailableTenants([...(response?.data || [])]);
         setError(null);
       }
-      setTenantsLoading(false);
     } catch (err) {
       setError(err as Error);
+    } finally {
       setTenantsLoading(false);
     }
   }, [userSdk]);

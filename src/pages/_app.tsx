@@ -36,15 +36,15 @@ function AppGuard({
 
 function TenantBoundary({ Component, pageProps }: AppProps) {
   const router = useRouter();
-  const tenantId = router.query.tenantId as string | undefined;
+  const tenantSlug = router.query.tenantSlug as string | undefined;
   const requiresTenant = (Component as any).requiresTenant === true;
 
-  if (requiresTenant && !tenantId) {
+  if (requiresTenant && !tenantSlug) {
     return <NoTenantSelected />;
   }
 
   return (
-    <PlatformTenantProvider tenantId={tenantId as string}>
+    <PlatformTenantProvider tenantSlug={tenantSlug as string}>
       <Component {...pageProps} />
     </PlatformTenantProvider>
   );

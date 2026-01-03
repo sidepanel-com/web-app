@@ -33,8 +33,8 @@ import {
   DialogTrigger,
 } from "@/ui-primitives/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/ui-primitives/ui/alert";
-import { useClientTenantSDK } from "@/lib/contexts/client-tenant-sdk.context";
-import { useClientUserSDK } from "@/lib/contexts/client-user-sdk.context";
+import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
+import { usePlatformUser } from "@/spaces/platform/contexts/platform-user.context";
 
 // Form schemas
 const tenantNameSchema = z.object({
@@ -60,8 +60,8 @@ type DeleteTenantFormValues = {
 };
 
 export default function TenantSettingsGeneral() {
-  const { loadAvailableTenants } = useClientUserSDK();
-  const { tenant, tenantSdk } = useClientTenantSDK();
+  const { loadAvailableTenants } = usePlatformUser();
+  const { tenant } = usePlatformTenant();
 
   // Tenant name form
   const tenantNameForm = useForm<TenantNameFormValues>({
@@ -89,7 +89,7 @@ export default function TenantSettingsGeneral() {
   const handleSaveName = async (values: TenantNameFormValues) => {
     try {
       tenantNameForm.clearErrors();
-      await tenantSdk?.tenant.updateTenantName(values.name);
+      // Todo: Update tenant name
       await loadAvailableTenants();
       // Optionally show success message or handle success state
     } catch (error) {
@@ -106,7 +106,7 @@ export default function TenantSettingsGeneral() {
   const handleDeleteTenant = async (values: DeleteTenantFormValues) => {
     try {
       deleteTenantForm.clearErrors();
-      await tenantSdk?.tenant.deleteTenant();
+      // Todo: Delete tenant
       deleteTenantForm.reset();
       await loadAvailableTenants();
     } catch (error) {

@@ -14,10 +14,10 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 export function PlatformTenantProvider({
-  tenantId,
+  tenantSlug,
   children,
 }: {
-  tenantId: string;
+  tenantSlug: string;
   children: React.ReactNode;
 }) {
   const { user, isLoading: userLoading } = usePlatformUser();
@@ -31,7 +31,7 @@ export function PlatformTenantProvider({
 
     if (userLoading) return;
 
-    if (!user) {
+    if (!user || !tenantSlug) {
       setTenant(null);
       setIsLoading(false);
       return;
@@ -42,7 +42,7 @@ export function PlatformTenantProvider({
         setIsLoading(true);
         setError(null);
 
-        const res = await fetch("/api/platform/tenant", {
+        const res = await fetch(`/api/tenants/${tenantSlug}`, {
           credentials: "include",
         });
 
@@ -52,7 +52,7 @@ export function PlatformTenantProvider({
 
         const data = await res.json();
         if (!cancelled) {
-          setTenant(data);
+          setTenant(data.data);
         }
       } catch (err) {
         if (!cancelled) setError(err as Error);
@@ -66,10 +66,12 @@ export function PlatformTenantProvider({
     return () => {
       cancelled = true;
     };
-  }, [userLoading, user]);
+  }, [userLoading, user, tenantSlug]);
 
   return (
-    <TenantContext.Provider value={{ tenant, isLoading, error }}>
+    <TenantContext.Provider
+      value={{ tenant, tenantSdk: null, isLoading, error }}
+    >
       {children}
     </TenantContext.Provider>
   );

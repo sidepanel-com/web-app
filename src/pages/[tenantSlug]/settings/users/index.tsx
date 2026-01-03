@@ -1,7 +1,7 @@
 import { GetServerSideProps } from "next";
 import { TenantUsersContainer } from "@/spaces/platform/ui/tenant/user-management/tenant-users-container";
 import { createClient } from "@/spaces/identity/supabase.server-props";
-import { AppPage } from "@/spaces/platform/ui/app/app-page";
+import { AppPage } from "@/spaces/platform/ui/layout/app-page";
 
 interface UsersSettingsPageProps {
   tenantSlug: string;
