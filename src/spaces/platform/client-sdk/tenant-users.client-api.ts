@@ -70,7 +70,7 @@ export class TenantUsersClientAPI {
     ApiResponse<{ invitation: Tables<"tenant_invitations">; message: string }>
   > {
     const response = await this.fetchClient.post(
-      `/tenants/${this.tenantSlug}/users`,
+      `/tenants/${this.tenantSlug}/invitations`,
       inviteData
     );
     return response as ApiResponse<{

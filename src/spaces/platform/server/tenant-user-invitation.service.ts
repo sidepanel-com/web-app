@@ -118,7 +118,7 @@ export class TenantUserInvitationService extends BaseEntityService {
         role: invitationData.role,
         token,
         expiresAt: expiresAt.toISOString(),
-        invitedBy: inviterTenantUser.id,
+        invitedBy: inviterTenantUser.profileId,
         status: "pending",
     };
     if (existingProfile) {
@@ -420,7 +420,10 @@ export class TenantUserInvitationService extends BaseEntityService {
     // Need to find tenantUser for current userId
     // Join tenantUsers -> userProfiles where userProfiles.userId = this.userId
     const [inviter] = await this.db
-      .select({ id: tenantUsers.id })
+      .select({ 
+        id: tenantUsers.id,
+        profileId: tenantUsers.profileId 
+      })
       .from(tenantUsers)
       .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
       .where(

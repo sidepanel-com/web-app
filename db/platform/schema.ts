@@ -99,9 +99,10 @@ export const tenantUsers =  platform.table('tenant_users', {
 export const tenantInvitations = platform.table('tenant_invitations', {
     id: uuid('id').defaultRandom().primaryKey(),
     tenantId: uuid('tenant_id').notNull(),
-    profileId: uuid('profile_id').notNull(),
+    email: text('email').notNull(),
+    profileId: uuid('profile_id'),
     role: tenantUserRole().notNull(),
-    status: tenantUserStatus().default('active'),
+    status: invitationStatus().default('pending'),
     invitedBy: uuid('invited_by'),
     invitedByEmail: text('invited_by_email'),
     token: text('token').notNull(),
