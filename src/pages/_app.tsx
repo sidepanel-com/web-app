@@ -7,14 +7,17 @@ import {
   IdentityAuthProvider,
   useAuth,
 } from "@/spaces/identity/identity-auth.context";
-import { PlatformUserProvider } from "@/spaces/platform/client/platform-user.context";
-import { PlatformTenantProvider } from "@/spaces/platform/client/platform-tenant.context";
+import { PlatformUserProvider } from "@/spaces/platform/contexts/platform-user.context";
+import { PlatformTenantProvider } from "@/spaces/platform/contexts/platform-tenant.context";
 
+import { NoTenantSelected } from "@/spaces/platform/ui/entry/no-tenant-selected";
 import "@/styles/globals.css";
 
 function AppGuard({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const { session, isLoading } = useAuth();
+
+  console.log("session", session);
 
   const isPublic = (Component as any).public === true;
 
@@ -34,8 +37,11 @@ function TenantBoundary({ Component, pageProps }: AppProps) {
   const tenantId = router.query.tenantId as string | undefined;
   const requiresTenant = (Component as any).requiresTenant === true;
 
+  console.log("tenantId", tenantId);
+  console.log("requiresTenant", requiresTenant);
+
   if (requiresTenant && !tenantId) {
-    return null; // or redirect to tenant picker
+    return <NoTenantSelected />;
   }
 
   return (
@@ -47,7 +53,12 @@ function TenantBoundary({ Component, pageProps }: AppProps) {
 
 export default function App(props: AppProps) {
   return (
-    <BrandingThemeProvider>
+    <BrandingThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
       <IdentityAuthProvider>
         <PlatformUserProvider>
           <AppGuard {...props}>

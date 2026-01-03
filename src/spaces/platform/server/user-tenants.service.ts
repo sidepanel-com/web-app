@@ -1,17 +1,19 @@
-import { SupabaseClient } from "@supabase/supabase-js";
-import { Tables } from "@/types/database.types";
-import { generateSlug } from "@/lib/utils/slug";
+import { eq, and } from "drizzle-orm";
+import { db } from "./db";
+import { tenants, tenantUsers, userProfiles } from "../../../../db/platform/schema";
+import { generateSlug } from "./utils";
+import { InferSelectModel } from "drizzle-orm";
 
-type Tenant = Tables<"tenants">;
-type UserRole = Tables<"tenant_users">["role"];
+type Tenant = InferSelectModel<typeof tenants>;
+type UserRole = InferSelectModel<typeof tenantUsers>["role"];
 
 // Service for user-level tenant operations (listing user's tenants, creating new tenants)
 export class UserTenantsService {
-  private dangerSupabaseAdmin: SupabaseClient;
+  private db: typeof db;
   private userId: string;
 
-  constructor(dangerSupabaseAdmin: SupabaseClient, userId: string) {
-    this.dangerSupabaseAdmin = dangerSupabaseAdmin;
+  constructor(drizzleClient: typeof db, userId: string) {
+    this.db = drizzleClient;
     this.userId = userId;
   }
 
@@ -19,22 +21,27 @@ export class UserTenantsService {
    * Get all tenants for the current user
    */
   async getUserTenants(): Promise<Tenant[]> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .select(
-        `
-        *,
-        tenant_users!inner(role, status, joined_at)
-      `
-      )
-      .eq("tenant_users.status", "active")
-      .eq("tenant_users.user_id", this.userId);
+    const result = await this.db
+      .select({
+        id: tenants.id,
+        slug: tenants.slug,
+        name: tenants.name,
+        status: tenants.status,
+        subscriptionTier: tenants.subscriptionTier,
+        createdAt: tenants.createdAt,
+        updatedAt: tenants.updatedAt,
+      })
+      .from(tenants)
+      .innerJoin(tenantUsers, eq(tenants.id, tenantUsers.tenantId))
+      .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
+      .where(
+        and(
+          eq(userProfiles.userId, this.userId),
+          eq(tenantUsers.status, "active")
+        )
+      );
 
-    if (error) throw error;
-    return data.map((tenant) => ({
-      ...tenant,
-      tenant_users: undefined,
-    }));
+    return result;
   }
 
   /**
@@ -43,33 +50,43 @@ export class UserTenantsService {
   async createTenant(data: Pick<Tenant, "name">): Promise<Tenant> {
     const tenantSlug = generateSlug(8);
 
-    const { data: tenant, error: tenantError } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .insert([
-        {
-          name: data.name,
-          slug: tenantSlug,
-        },
-      ])
-      .select()
-      .single();
+    // 1. Get User Profile ID
+    const [userProfile] = await this.db
+      .select({ id: userProfiles.id })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, this.userId));
 
-    if (tenantError) throw tenantError;
+    if (!userProfile) {
+      throw new Error("User profile not found. Cannot create tenant.");
+    }
 
-    const { data: tenantUser, error: tenantUserError } =
-      await this.dangerSupabaseAdmin
-        .from("tenant_users")
-        .insert([
-          {
-            tenant_id: tenant.id,
-            user_id: this.userId,
-            role: "owner",
-          },
-        ])
-        .select()
-        .single();
+    // 2. Create Tenant
+    const [tenant] = await this.db
+      .insert(tenants)
+      .values({
+        name: data.name,
+        slug: tenantSlug,
+        status: "active",
+      })
+      .returning();
 
-    if (tenantUserError) throw tenantUserError;
+    if (!tenant) throw new Error("Failed to create tenant");
+
+    // 3. Add User as Owner
+    try {
+      await this.db.insert(tenantUsers).values({
+        tenantId: tenant.id,
+        profileId: userProfile.id,
+        role: "owner",
+      });
+    } catch (e) {
+      // If we fail to add the user, we should ideally delete the tenant to avoid orphans,
+      // but without transactions this is best effort.
+      // Ideally this whole method should be in a transaction.
+      console.error("Failed to add user to tenant, cleaning up tenant", e);
+      await this.db.delete(tenants).where(eq(tenants.id, tenant.id));
+      throw e;
+    }
 
     return tenant;
   }
@@ -78,71 +95,77 @@ export class UserTenantsService {
    * Get user's role in a specific tenant
    */
   async getUserRoleInTenant(tenantId: string): Promise<UserRole | null> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenant_users")
-      .select("role")
-      .eq("tenant_id", tenantId)
-      .eq("user_id", this.userId)
-      .eq("status", "active")
-      .single();
+    const [result] = await this.db
+      .select({ role: tenantUsers.role })
+      .from(tenantUsers)
+      .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
+      .where(
+        and(
+          eq(tenantUsers.tenantId, tenantId),
+          eq(userProfiles.userId, this.userId),
+          eq(tenantUsers.status, "active")
+        )
+      );
 
-    if (error && error.code !== "PGRST116") throw error;
-    return data?.role || null;
+    return result?.role || null;
   }
 
   /**
    * Check if user has access to a specific tenant
    */
   async hasAccessToTenant(tenantId: string): Promise<boolean> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenant_users")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("user_id", this.userId)
-      .eq("status", "active")
+    const [result] = await this.db
+      .select({ id: tenantUsers.id })
+      .from(tenantUsers)
+      .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
+      .where(
+        and(
+          eq(tenantUsers.tenantId, tenantId),
+          eq(userProfiles.userId, this.userId),
+          eq(tenantUsers.status, "active")
+        )
+      )
       .limit(1);
 
-    if (error) throw error;
-    return data && data.length > 0;
+    return !!result;
   }
 
   /**
    * Get tenant by slug (with access check)
    */
   async getTenantBySlug(slug: string): Promise<Tenant | null> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .select("*")
-      .eq("slug", slug)
-      .single();
+    const [tenant] = await this.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, slug));
 
-    if (error && error.code !== "PGRST116") throw error;
+    if (!tenant) return null;
 
     // Check if user has access to this tenant
-    if (data && !(await this.hasAccessToTenant(data.id))) {
+    const hasAccess = await this.hasAccessToTenant(tenant.id);
+    if (!hasAccess) {
       return null;
     }
 
-    return data;
+    return tenant;
   }
 
   // Static utility methods
   static async isSlugAvailable(
-    dangerSupabaseAdmin: SupabaseClient,
+    drizzleClient: typeof db,
     slug: string
   ): Promise<boolean> {
-    const { data, error } = await dangerSupabaseAdmin
-      .from("tenants")
-      .select("id")
-      .eq("slug", slug)
+    const [result] = await drizzleClient
+      .select({ id: tenants.id })
+      .from(tenants)
+      .where(eq(tenants.slug, slug))
       .limit(1);
 
-    if (error) throw error;
-    return !data || data.length === 0;
+    return !result;
   }
 
   static async generateUniqueSlug(
-    dangerSupabaseAdmin: SupabaseClient,
+    drizzleClient: typeof db,
     name: string
   ): Promise<string> {
     const baseSlug = name
@@ -153,7 +176,7 @@ export class UserTenantsService {
     let slug = baseSlug;
     let counter = 1;
 
-    while (!(await this.isSlugAvailable(dangerSupabaseAdmin, slug))) {
+    while (!(await this.isSlugAvailable(drizzleClient, slug))) {
       slug = `${baseSlug}-${counter}`;
       counter++;
     }

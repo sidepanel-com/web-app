@@ -1,5 +1,5 @@
 import { Button } from "@/ui-primitives/ui/button";
-import { useSession } from "@/spaces/identity/identity-auth.context";
+import { useAuth } from "@/spaces/identity/identity-auth.context";
 import { Loader2 } from "lucide-react";
 
 interface LogoutButtonProps {
@@ -19,7 +19,7 @@ export function LogoutButton({
   size = "default",
   className,
 }: LogoutButtonProps) {
-  const { isLoading, logout } = useSession();
+  const { isLoading, logout } = useAuth();
 
   const handleLogout = async () => {
     try {

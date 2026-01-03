@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   AudioWaveform,
   BookOpen,
@@ -12,18 +12,18 @@ import {
   PieChart,
   Settings,
   SquareTerminal,
-} from "lucide-react"
+} from "lucide-react";
 
-import { AppNavSection } from "@/components/app/app-nav-section"
-import { AppTenantSwitcher } from "@/components/app/app-tenant-switcher"
-import { AppNavUser } from "@/components/app/app-nav-user"
+import { AppNavSection } from "@/components/app/app-nav-section";
+import { AppTenantSwitcher } from "@/components/app/app-tenant-switcher";
+import { AppNavUser } from "@/components/app/app-nav-user";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/ui-primitives/ui/sidebar";
 
 // This is sample data.
 const data = {
@@ -161,7 +161,7 @@ const data = {
       ],
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -178,5 +178,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

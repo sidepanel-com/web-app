@@ -1,24 +1,31 @@
-import { SupabaseClient } from "@supabase/supabase-js";
-import { Tables, TablesUpdate } from "@/types/database.types";
-import { generateSlug } from "@/lib/utils/slug";
+import { eq, and } from "drizzle-orm";
+// import { SupabaseClient } from "@supabase/supabase-js"; // Removed
+import { db } from "./db";
+import { tenants, tenantUsers, userProfiles } from "../../../../db/platform/schema";
+import { generateSlug } from "@/spaces/platform/server/utils";
 import { BaseEntityService, PermissionContext } from "./base-entity.service";
+import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
-type UserRole = Tables<"tenant_users">["role"];
+// Type definitions based on Drizzle Schema
+type Tenant = InferSelectModel<typeof tenants>;
+type TenantUser = InferSelectModel<typeof tenantUsers>;
+type TenantUserInsert = InferInsertModel<typeof tenantUsers>;
+type UserRole = TenantUser["role"];
+type TenantUpdate = Partial<Tenant>; // Approximate
 
-type Tenant = Tables<"tenants">;
-type TenantUser = Tables<"tenant_users">;
-type TenantUserInsert = Tables<"tenant_users">;
-type TenantUpdate = TablesUpdate<"tenants">;
-type TenantWithUsers = Tables<"tenants"> & {
-  tenant_users: Tables<"tenant_users">[];
+// Composite type for GetTenantWithUsers
+type TenantWithUsers = Tenant & {
+  tenant_users: (TenantUser & {
+    user_profiles: InferSelectModel<typeof userProfiles>;
+  })[];
 };
 
 export class TenantService extends BaseEntityService {
   constructor(
-    dangerSupabaseAdmin: SupabaseClient,
+    drizzleClient: typeof db,
     permissionContext: PermissionContext
   ) {
-    super(dangerSupabaseAdmin, permissionContext);
+    super(drizzleClient, permissionContext);
   }
 
   // Permission checks for tenant operations
@@ -48,17 +55,20 @@ export class TenantService extends BaseEntityService {
 
   // Core tenant operations
   async isOwnerCheck(tenantId: string): Promise<boolean> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenant_users")
-      .select("role")
-      .eq("tenant_id", tenantId)
-      .eq("user_id", this.permissionContext.userId)
-      .eq("status", "active")
-      .eq("role", "owner")
-      .single();
+    const [result] = await this.db
+      .select({ role: tenantUsers.role })
+      .from(tenantUsers)
+      .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
+      .where(
+        and(
+          eq(tenantUsers.tenantId, tenantId),
+          eq(userProfiles.userId, this.permissionContext.userId),
+          eq(tenantUsers.status, "active"),
+          eq(tenantUsers.role, "owner")
+        )
+      );
 
-    if (error) throw error;
-    return data?.role === "owner";
+    return !!result;
   }
 
   /**
@@ -69,37 +79,45 @@ export class TenantService extends BaseEntityService {
       throw new Error("Insufficient permissions to create tenant");
     }
 
+    // 1. Get User Profile ID
+    const [userProfile] = await this.db
+      .select({ id: userProfiles.id })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, this.permissionContext.userId));
+
+    if (!userProfile) {
+      throw new Error("User profile not found. Cannot create tenant.");
+    }
+
     const tenantSlug = generateSlug(8);
 
-    const { data: tenant, error: tenantError } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .insert([
-        {
-          name: data.name,
-          slug: tenantSlug,
-        },
-      ])
-      .select()
-      .single();
+    // 2. Create Tenant
+    const [tenant] = await this.db
+      .insert(tenants)
+      .values({
+        name: data.name,
+        slug: tenantSlug,
+        status: "active",
+      })
+      .returning();
 
-    if (tenantError) throw tenantError;
+    if (!tenant) throw new Error("Failed to create tenant");
 
-    const { data: tenantUser, error: tenantUserError } =
-      await this.dangerSupabaseAdmin
-        .from("tenant_users")
-        .insert([
-          {
-            tenant_id: tenant.id,
-            user_id: this.permissionContext.userId,
-            role: "owner",
-          },
-        ])
-        .select()
-        .single();
-
-    if (tenantUserError) throw tenantUserError;
-
-    console.log(tenantUser);
+    // 3. Add User as Owner
+    try {
+      await this.db.insert(tenantUsers).values({
+        tenantId: tenant.id,
+        profileId: userProfile.id,
+        role: "owner",
+      });
+    } catch (e) {
+      console.error("Failed to add user to tenant, cleaning up tenant", e);
+      await this.db.delete(tenants).where(eq(tenants.id, tenant.id));
+      throw e;
+    }
+    
+    // Debug log compatible with previous implementation
+    console.log("Tenant created with owner", { tenantId: tenant.id, profileId: userProfile.id });
 
     return tenant;
   }
@@ -112,56 +130,59 @@ export class TenantService extends BaseEntityService {
       throw new Error("Insufficient permissions to read tenant");
     }
 
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .select("*")
-      .eq("id", tenantId)
-      .single();
+    const [tenant] = await this.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, tenantId));
 
-    if (error) throw error;
-    return data;
+    return tenant || null;
   }
 
   /**
    * Get tenant by slug
    */
   async getTenantBySlug(slug: string): Promise<Tenant | null> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .select("*")
-      .eq("slug", slug)
-      .single();
+    const [tenant] = await this.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, slug));
 
-    if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows returned
+    if (!tenant) return null;
 
     // Check if user has access to this tenant
-    if (data && !(await this.canRead(data.id))) {
+    // NOTE: This logic mimics original service which allowed fetching by slug but checked access
+    if (tenant && !(await this.canRead(tenant.id))) {
       return null;
     }
 
-    return data;
+    return tenant;
   }
 
   /**
    * Get all tenants for the current user
    */
   async getUserTenants(): Promise<Tenant[]> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .select(
-        `
-        *,
-        tenant_users!inner(role, status, joined_at)
-      `
-      )
-      .eq("tenant_users.status", "active")
-      .eq("tenant_users.user_id", this.permissionContext.userId);
+    const result = await this.db
+      .select({
+         id: tenants.id,
+         slug: tenants.slug,
+         name: tenants.name,
+         status: tenants.status,
+         subscriptionTier: tenants.subscriptionTier,
+         createdAt: tenants.createdAt,
+         updatedAt: tenants.updatedAt,
+      })
+      .from(tenants)
+      .innerJoin(tenantUsers, eq(tenants.id, tenantUsers.tenantId))
+      .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
+      .where(
+        and(
+          eq(userProfiles.userId, this.permissionContext.userId),
+          eq(tenantUsers.status, "active")
+        )
+      );
 
-    if (error) throw error;
-    return data.map((tenant) => ({
-      ...tenant,
-      tenant_users: undefined,
-    }));
+    return result;
   }
 
   /**
@@ -172,15 +193,16 @@ export class TenantService extends BaseEntityService {
       throw new Error("Insufficient permissions to update tenant");
     }
 
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .update(updates)
-      .eq("id", tenantId)
-      .select()
-      .single();
+    const [updated] = await this.db
+      .update(tenants)
+      .set({
+        ...updates,
+        updatedAt: new Date().toISOString(), // Drizzle usually handles updatedAt on DB side if configured, but safe to set
+      })
+      .where(eq(tenants.id, tenantId))
+      .returning();
 
-    if (error) throw error;
-    return data;
+    return updated;
   }
 
   /**
@@ -191,76 +213,86 @@ export class TenantService extends BaseEntityService {
       throw new Error("Insufficient permissions to read tenant users");
     }
 
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .select(
-        `
-        *,
-        tenant_users(
-          *,
-          user_profiles(*)
-        )
-      `
-      )
-      .eq("id", tenantId)
-      .single();
+    // Use manual join since relations are not fully typed/verified
+    const [tenantData] = await this.db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (!tenantData) return null;
 
-    if (error) throw error;
-    return data;
+    const users = await this.db
+      .select({
+        tenantUser: tenantUsers,
+        userProfile: userProfiles,
+      })
+      .from(tenantUsers)
+      .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
+      .where(eq(tenantUsers.tenantId, tenantId));
+
+    // Transform to expected shape
+    const formattedUsers = users.map(u => ({
+        ...u.tenantUser,
+        user_profiles: u.userProfile
+    }));
+
+    return {
+        ...tenantData,
+        tenant_users: formattedUsers
+    };
   }
 
   /**
    * Check if user has access to tenant
    */
   async hasAccessToTenant(tenantId: string): Promise<boolean> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenant_users")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("user_id", this.permissionContext.userId)
-      .eq("status", "active")
+    const [result] = await this.db
+      .select({ id: tenantUsers.id })
+      .from(tenantUsers)
+      .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
+      .where(
+        and(
+          eq(tenantUsers.tenantId, tenantId),
+          eq(userProfiles.userId, this.permissionContext.userId),
+          eq(tenantUsers.status, "active")
+        )
+      )
       .limit(1);
 
-    if (error) throw error;
-    return data && data.length > 0;
+    return !!result;
   }
 
   /**
    * Get user's role in tenant
    */
   async getUserRoleInTenant(tenantId: string): Promise<UserRole | null> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenant_users")
-      .select("role")
-      .eq("tenant_id", tenantId)
-      .eq("user_id", this.permissionContext.userId)
-      .eq("status", "active")
-      .single();
+    const [result] = await this.db
+      .select({ role: tenantUsers.role })
+      .from(tenantUsers)
+      .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
+      .where(
+        and(
+          eq(tenantUsers.tenantId, tenantId),
+          eq(userProfiles.userId, this.permissionContext.userId),
+          eq(tenantUsers.status, "active")
+        )
+      );
 
-    if (error && error.code !== "PGRST116") throw error;
-    return data?.role || null;
+    return result?.role || null;
   }
 
   /**
    * Add user to tenant (admin+ only)
    */
   async addUserToTenant(
-    data: Omit<TenantUserInsert, "id" | "created_at" | "updated_at">
+    data: Omit<TenantUserInsert, "id" | "createdAt" | "updatedAt">
   ): Promise<TenantUser> {
-    if (!(await this.hasPermission("manage_users", data.tenant_id))) {
+    if (!(await this.hasPermission("manage_users", data.tenantId))) {
       throw new Error("Insufficient permissions to add users to tenant");
     }
 
-    const { data: result, error } = await this.dangerSupabaseAdmin
-      .from("tenant_users")
-      .insert({
-        ...data,
-        joined_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    // Drizzle insert
+    const [result] = await this.db
+      .insert(tenantUsers)
+      .values(data as TenantUserInsert) // Type cast if Omit mismatch, but should be fine
+      .returning();
 
-    if (error) throw error;
     return result;
   }
 
@@ -272,28 +304,25 @@ export class TenantService extends BaseEntityService {
     role: UserRole
   ): Promise<TenantUser> {
     // First get the tenant_id for permission check
-    const { data: tenantUser, error: fetchError } =
-      await this.dangerSupabaseAdmin
-        .from("tenant_users")
-        .select("tenant_id")
-        .eq("id", tenantUserId)
-        .single();
+    const [tenantUser] =
+      await this.db
+        .select({ tenantId: tenantUsers.tenantId })
+        .from(tenantUsers)
+        .where(eq(tenantUsers.id, tenantUserId));
 
-    if (fetchError) throw fetchError;
+    if (!tenantUser) throw new Error("Tenant user not found");
 
-    if (!(await this.hasPermission("manage_users", tenantUser.tenant_id))) {
+    if (!(await this.hasPermission("manage_users", tenantUser.tenantId))) {
       throw new Error("Insufficient permissions to update user roles");
     }
 
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenant_users")
-      .update({ role })
-      .eq("id", tenantUserId)
-      .select()
-      .single();
+    const [updated] = await this.db
+      .update(tenantUsers)
+      .set({ role })
+      .where(eq(tenantUsers.id, tenantUserId))
+      .returning();
 
-    if (error) throw error;
-    return data;
+    return updated;
   }
 
   /**
@@ -301,25 +330,19 @@ export class TenantService extends BaseEntityService {
    */
   async removeUserFromTenant(tenantUserId: string): Promise<void> {
     // First get the tenant_id for permission check
-    const { data: tenantUser, error: fetchError } =
-      await this.dangerSupabaseAdmin
-        .from("tenant_users")
-        .select("tenant_id")
-        .eq("id", tenantUserId)
-        .single();
+    const [tenantUser] =
+      await this.db
+        .select({ tenantId: tenantUsers.tenantId })
+        .from(tenantUsers)
+        .where(eq(tenantUsers.id, tenantUserId));
 
-    if (fetchError) throw fetchError;
+    if (!tenantUser) throw new Error("Tenant user not found");
 
-    if (!(await this.hasPermission("manage_users", tenantUser.tenant_id))) {
+    if (!(await this.hasPermission("manage_users", tenantUser.tenantId))) {
       throw new Error("Insufficient permissions to remove users from tenant");
     }
 
-    const { error } = await this.dangerSupabaseAdmin
-      .from("tenant_users")
-      .delete()
-      .eq("id", tenantUserId);
-
-    if (error) throw error;
+    await this.db.delete(tenantUsers).where(eq(tenantUsers.id, tenantUserId));
   }
 
   /**
@@ -327,38 +350,42 @@ export class TenantService extends BaseEntityService {
    */
   async getTenantUsers(
     tenantId: string
-  ): Promise<(TenantUser & { user_profiles: any })[]> {
+  ): Promise<(TenantUser & { user_profiles: InferSelectModel<typeof userProfiles> })[]> {
     if (!(await this.hasPermission("read_users", tenantId))) {
       throw new Error("Insufficient permissions to read tenant users");
     }
 
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenant_users")
-      .select(
-        `
-        *,
-        user_profiles(*)
-      `
-      )
-      .eq("tenant_id", tenantId)
-      .eq("status", "active");
+    const users = await this.db
+      .select({
+        tenantUser: tenantUsers,
+        userProfile: userProfiles,
+      })
+      .from(tenantUsers)
+      .innerJoin(userProfiles, eq(tenantUsers.profileId, userProfiles.id))
+      .where(
+        and(
+            eq(tenantUsers.tenantId, tenantId),
+            eq(tenantUsers.status, "active")
+        )
+      );
 
-    if (error) throw error;
-    return data || [];
+    return users.map(u => ({
+        ...u.tenantUser,
+        user_profiles: u.userProfile
+    }));
   }
 
   /**
    * Check if slug is available
    */
   async isSlugAvailable(slug: string): Promise<boolean> {
-    const { data, error } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .select("id")
-      .eq("slug", slug)
+    const [data] = await this.db
+      .select({ id: tenants.id })
+      .from(tenants)
+      .where(eq(tenants.slug, slug))
       .limit(1);
 
-    if (error) throw error;
-    return !data || data.length === 0;
+    return !data;
   }
 
   /**
@@ -389,40 +416,34 @@ export class TenantService extends BaseEntityService {
       throw new Error("Insufficient permissions to delete tenant");
     }
 
-    const { error } = await this.dangerSupabaseAdmin
-      .from("tenants")
-      .delete()
-      .eq("id", tenantId);
-
-    if (error) throw error;
+    await this.db.delete(tenants).where(eq(tenants.id, tenantId));
   }
 
   // Static factory method for backward compatibility and easy instantiation
   static create(
-    dangerSupabaseAdmin: SupabaseClient,
+    drizzleClient: typeof db,
     userId: string,
     tenantId?: string,
     userRole?: UserRole
   ): TenantService {
-    return new TenantService(dangerSupabaseAdmin, {
+    return new TenantService(drizzleClient, {
       userId,
-      tenantId,
+      tenantId, // Warning: This might be treated as string | undefined
       userRole,
     });
   }
 
   // Static methods for system-level operations (no user context needed)
   static async isSlugAvailableStatic(
-    dangerSupabaseAdmin: SupabaseClient,
+    drizzleClient: typeof db,
     slug: string
   ): Promise<boolean> {
-    const { data, error } = await dangerSupabaseAdmin
-      .from("tenants")
-      .select("id")
-      .eq("slug", slug)
+    const [data] = await drizzleClient
+      .select({ id: tenants.id })
+      .from(tenants)
+      .where(eq(tenants.slug, slug))
       .limit(1);
 
-    if (error) throw error;
-    return !data || data.length === 0;
+    return !data;
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { useUser } from "@/spaces/platform/client/platform-user.context";
+import { usePlatformUser } from "@/spaces/platform/contexts/platform-user.context";
 
 interface Tenant {
   id: string;
@@ -24,7 +24,7 @@ export function PlatformTenantProvider({
   tenantId: string;
   children: React.ReactNode;
 }) {
-  const { user, isLoading: userLoading } = useUser();
+  const { user, isLoading: userLoading } = usePlatformUser();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);

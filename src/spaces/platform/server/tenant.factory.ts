@@ -6,7 +6,6 @@ import { Tables } from "@/types/database.types";
 type UserRole = Tables<"tenant_users">["role"];
 
 export function createTenantService(
-  dangerSupabaseAdmin: SupabaseClient,
   userId: string,
   tenantId?: string,
   userRole?: UserRole
@@ -16,5 +15,5 @@ export function createTenantService(
     tenantId,
     userRole,
   };
-  return new TenantService(dangerSupabaseAdmin, permissionContext);
+  return new TenantService();
 }

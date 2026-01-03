@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   BadgeCheck,
@@ -7,13 +7,9 @@ import {
   CreditCard,
   LogOut,
   Sparkles,
-} from "lucide-react"
+} from "lucide-react";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/ui-primitives/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,27 +18,27 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/ui-primitives/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { useRouter } from "next/navigation"
+} from "@/ui-primitives/ui/sidebar";
+import { useRouter } from "next/navigation";
 
-import { useSession } from "@/lib/contexts/session.context"
+import { useSession } from "@/lib/contexts/session.context";
 
 export function AppNavUser({
   user,
 }: {
   user: {
-    name: string
-    email: string
-    avatar: string
-  }
+    name: string;
+    email: string;
+    avatar: string;
+  };
 }) {
-  const { isMobile } = useSidebar()
+  const { isMobile } = useSidebar();
   const router = useRouter();
   const session = useSession();
 
@@ -107,10 +103,12 @@ export function AppNavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => {
-              session.logout();
-              router.push("/auth/login");
-            }}>
+            <DropdownMenuItem
+              onClick={() => {
+                session.logout();
+                router.push("/auth/login");
+              }}
+            >
               <LogOut />
               Log out
             </DropdownMenuItem>
@@ -118,5 +116,5 @@ export function AppNavUser({
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }

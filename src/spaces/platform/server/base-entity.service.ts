@@ -1,4 +1,4 @@
-import { SupabaseClient } from "@supabase/supabase-js";
+import { DrizzleClient } from "./db";
 import { Tables } from "@/types/database.types";
 
 type UserRole = Tables<"tenant_users">["role"];
@@ -13,14 +13,14 @@ export interface PermissionContext {
 
 // Base service class that all entity services will extend
 export abstract class BaseEntityService {
-  protected dangerSupabaseAdmin: SupabaseClient;
+  protected db: DrizzleClient;
   protected permissionContext: PermissionContext;
 
   constructor(
-    dangerSupabaseAdmin: SupabaseClient,
+    db: DrizzleClient,
     permissionContext: PermissionContext
   ) {
-    this.dangerSupabaseAdmin = dangerSupabaseAdmin;
+    this.db = db;
     this.permissionContext = permissionContext;
   }
 
