@@ -1,0 +1,20 @@
+import { SupabaseClient } from "@supabase/supabase-js";
+import { TenantService } from "./tenant.service";
+import { PermissionContext } from "./base-entity.service";
+import { Tables } from "@/types/database.types";
+
+type UserRole = Tables<"tenant_users">["role"];
+
+export function createTenantService(
+  dangerSupabaseAdmin: SupabaseClient,
+  userId: string,
+  tenantId?: string,
+  userRole?: UserRole
+): TenantService {
+  const permissionContext: PermissionContext = {
+    userId,
+    tenantId,
+    userRole,
+  };
+  return new TenantService(dangerSupabaseAdmin, permissionContext);
+}
