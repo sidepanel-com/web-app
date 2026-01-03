@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { useRouter } from "next/router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/ui-primitives/ui/button";
@@ -60,8 +62,9 @@ type DeleteTenantFormValues = {
 };
 
 export default function TenantSettingsGeneral() {
+  const router = useRouter();
   const { loadAvailableTenants } = usePlatformUser();
-  const { tenant } = usePlatformTenant();
+  const { tenant, tenantSdk, reloadTenant } = usePlatformTenant();
 
   // Tenant name form
   const tenantNameForm = useForm<TenantNameFormValues>({
@@ -87,11 +90,13 @@ export default function TenantSettingsGeneral() {
   }, [tenant, tenantNameForm]);
 
   const handleSaveName = async (values: TenantNameFormValues) => {
+    if (!tenantSdk) return;
+
     try {
       tenantNameForm.clearErrors();
-      // Todo: Update tenant name
-      await loadAvailableTenants();
-      // Optionally show success message or handle success state
+      await tenantSdk.tenant.updateTenantName(values.name);
+      await Promise.all([loadAvailableTenants(), reloadTenant()]);
+      toast.success("Tenant name updated successfully");
     } catch (error) {
       tenantNameForm.setError("root", {
         type: "manual",
@@ -104,11 +109,15 @@ export default function TenantSettingsGeneral() {
   };
 
   const handleDeleteTenant = async (values: DeleteTenantFormValues) => {
+    if (!tenantSdk) return;
+
     try {
       deleteTenantForm.clearErrors();
-      // Todo: Delete tenant
+      await tenantSdk.tenant.deleteTenant();
       deleteTenantForm.reset();
       await loadAvailableTenants();
+      toast.success("Tenant deleted successfully");
+      router.push("/");
     } catch (error) {
       deleteTenantForm.setError("root", {
         type: "manual",

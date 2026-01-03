@@ -1,4 +1,4 @@
-import { Tables } from "@/types/database.types";
+
 import { ApiClient, ApiResponse } from "./index";
 
 export class TenantClientAPI {
