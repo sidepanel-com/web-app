@@ -42,7 +42,7 @@ import { AlertCircle } from "lucide-react";
 import {
   TenantUserListItem,
   TenantUserStats,
-} from "@/lib/client-sdk/tenant-users.client-api";
+} from "@/spaces/platform/client-sdk/tenant-users.client-api";
 import { cn } from "@/ui-primitives/utils";
 import { useTenantUsers } from "@/hooks/use-tenant-users";
 

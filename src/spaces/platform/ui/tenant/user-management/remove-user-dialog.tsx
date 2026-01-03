@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Badge } from "@/ui-primitives/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui-primitives/ui/avatar";
-import { TenantUserListItem } from "@/lib/client-sdk/tenant-users.client-api";
+import { TenantUserListItem } from "@/spaces/platform/client-sdk/tenant-users.client-api";
 
 interface RemoveUserDialogProps {
   open: boolean;

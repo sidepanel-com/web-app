@@ -27,7 +27,7 @@ import {
 } from "@/ui-primitives/ui/sidebar";
 import { useRouter } from "next/navigation";
 
-import { useSession } from "@/lib/contexts/session.context";
+import { usePlatformUser } from "@/spaces/platform/contexts/platform-user.context";
 
 export function AppNavUser({
   user,
@@ -40,7 +40,6 @@ export function AppNavUser({
 }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
-  const session = useSession();
 
   return (
     <SidebarMenu>
@@ -103,12 +102,7 @@ export function AppNavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                session.logout();
-                router.push("/auth/login");
-              }}
-            >
+            <DropdownMenuItem onClick={() => {}}>
               <LogOut />
               Log out
             </DropdownMenuItem>

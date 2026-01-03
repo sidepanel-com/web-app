@@ -9,7 +9,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/ui-primitives/ui/breadcrumb";
-import { useClientTenantSDK } from "@/lib/contexts/client-tenant-sdk.context";
+import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
 
 interface BreadcrumbConfig {
   title: string;
@@ -19,12 +19,12 @@ interface BreadcrumbConfig {
 
 export function AppNavBreadcrumbs() {
   const router = useRouter();
-  const { tenant } = useClientTenantSDK();
+  const { tenant } = usePlatformTenant();
   const { tenantSlug } = router.query;
 
   // Static tenant menu items that appear for all tenants
   const staticTenantMenu = [
-    { title: "Dashboard", href: `/${tenantSlug}/dashboard` },
+    { title: "Dashboard", href: `/${tenantSlug}/shboard` },
     { title: "Settings", href: `/${tenantSlug}/settings` },
   ];
 
@@ -43,7 +43,7 @@ export function AppNavBreadcrumbs() {
     if (tenantSlug) {
       breadcrumbs.push({
         title: tenant?.name || String(tenantSlug),
-        href: `/${tenantSlug}/dashboard`,
+        href: `/${tenantSlug}/`,
       });
     }
 
@@ -77,9 +77,9 @@ export function AppNavBreadcrumbs() {
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        {breadcrumbs.map((breadcrumb, index) => (
-          <div key={index} className="flex items-center">
-            {index > 0 && <BreadcrumbSeparator />}
+        {breadcrumbs.map((breadcrumb) => (
+          <div key={breadcrumb.title} className="flex items-center">
+            {breadcrumbs.indexOf(breadcrumb) > 0 && <BreadcrumbSeparator />}
             <BreadcrumbItem>
               {breadcrumb.isActive || !breadcrumb.href ? (
                 <BreadcrumbPage>{breadcrumb.title}</BreadcrumbPage>

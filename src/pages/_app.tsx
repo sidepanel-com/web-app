@@ -13,13 +13,15 @@ import { PlatformTenantProvider } from "@/spaces/platform/contexts/platform-tena
 import { NoTenantSelected } from "@/spaces/platform/ui/entry/no-tenant-selected";
 import "@/styles/globals.css";
 
-function AppGuard({ Component, pageProps }: AppProps) {
+function AppGuard({
+  children,
+  isPublic,
+}: {
+  children: React.ReactNode;
+  isPublic: boolean;
+}) {
   const router = useRouter();
   const { session, isLoading } = useAuth();
-
-  console.log("session", session);
-
-  const isPublic = (Component as any).public === true;
 
   if (!isPublic) {
     if (isLoading) return null;
@@ -29,16 +31,13 @@ function AppGuard({ Component, pageProps }: AppProps) {
     }
   }
 
-  return <Component {...pageProps} />;
+  return <>{children}</>;
 }
 
 function TenantBoundary({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const tenantId = router.query.tenantId as string | undefined;
   const requiresTenant = (Component as any).requiresTenant === true;
-
-  console.log("tenantId", tenantId);
-  console.log("requiresTenant", requiresTenant);
 
   if (requiresTenant && !tenantId) {
     return <NoTenantSelected />;
@@ -52,6 +51,8 @@ function TenantBoundary({ Component, pageProps }: AppProps) {
 }
 
 export default function App(props: AppProps) {
+  const isPublic = (props.Component as any).public === true;
+
   return (
     <BrandingThemeProvider
       attribute="class"
@@ -61,7 +62,7 @@ export default function App(props: AppProps) {
     >
       <IdentityAuthProvider>
         <PlatformUserProvider>
-          <AppGuard {...props}>
+          <AppGuard isPublic={isPublic}>
             <TenantBoundary {...props} />
           </AppGuard>
         </PlatformUserProvider>

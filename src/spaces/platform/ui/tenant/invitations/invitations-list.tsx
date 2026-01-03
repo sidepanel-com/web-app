@@ -37,7 +37,7 @@ import { Badge } from "@/ui-primitives/ui/badge";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useClientTenantSDK } from "@/lib/contexts/client-tenant-sdk.context";
-import { InvitationWithDetails } from "@/lib/client-sdk/tenant-invitations.client-api";
+import { InvitationWithDetails } from "@/spaces/platform/client-sdk/tenant-invitations.client-api";
 import { toast } from "sonner";
 
 const roleColors: Record<string, string> = {

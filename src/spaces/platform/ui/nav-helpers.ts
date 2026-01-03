@@ -22,7 +22,7 @@ export function navigateWithFullPageTransition(url: string): void {
  * @param tenantSlug - The tenant slug to navigate to
  */
 export function navigateToTenantDashboard(tenantSlug: string): void {
-  navigateWithFullPageTransition(`/${tenantSlug}/dashboard`);
+  navigateWithFullPageTransition(`/${tenantSlug}/`);
 }
 
 /**

@@ -3,11 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { usePlatformUser } from "@/spaces/platform/contexts/platform-user.context";
 
-interface Tenant {
-  id: string;
-  name: string;
-  role: string;
-}
+import type { Tenant } from "@db/platform/types";
 
 interface TenantContextType {
   tenant: Tenant | null;
@@ -79,10 +75,12 @@ export function PlatformTenantProvider({
   );
 }
 
-export function useTenant() {
+export function usePlatformTenant() {
   const ctx = useContext(TenantContext);
   if (!ctx) {
-    throw new Error("useTenant must be used within a TenantProvider");
+    throw new Error(
+      "usePlatformTenant must be used within a PlatformTenantProvider",
+    );
   }
   return ctx;
 }

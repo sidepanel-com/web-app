@@ -19,7 +19,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/ui-primitives/ui/sidebar";
-import { useClientTenantSDK } from "@/lib/contexts/client-tenant-sdk.context";
+import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
 
 const MENU_STATE_STORAGE_KEY = "sidebar_menu_state";
 
@@ -75,7 +75,7 @@ export function AppNavSection({
     }[];
   }[];
 }) {
-  const { tenant } = useClientTenantSDK();
+  const { tenant } = usePlatformTenant();
   const tenantSlug = tenant?.slug;
 
   // Initialize state for each menu item

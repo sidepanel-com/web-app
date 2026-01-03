@@ -14,9 +14,9 @@ import {
   SquareTerminal,
 } from "lucide-react";
 
-import { AppNavSection } from "@/components/app/app-nav-section";
-import { AppTenantSwitcher } from "@/components/app/app-tenant-switcher";
-import { AppNavUser } from "@/components/app/app-nav-user";
+import { AppNavSection } from "./app-nav-section";
+import { AppTenantSwitcher } from "./app-tenant-switcher";
+import { AppNavUser } from "./app-nav-user";
 import {
   Sidebar,
   SidebarContent,

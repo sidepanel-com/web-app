@@ -13,7 +13,7 @@ import { RemoveUserDialog } from "./remove-user-dialog";
 import {
   TenantUserListItem,
   TenantUserStats,
-} from "@/lib/client-sdk/tenant-users.client-api";
+} from "@/spaces/platform/client-sdk/tenant-users.client-api";
 import { useClientTenantSDK } from "@/lib/contexts/client-tenant-sdk.context";
 import { useClientUserSDK } from "@/lib/contexts/client-user-sdk.context";
 

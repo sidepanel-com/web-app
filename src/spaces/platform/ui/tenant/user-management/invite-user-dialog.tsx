@@ -35,7 +35,7 @@ import {
 } from "@/ui-primitives/ui/select";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { InviteUserRequest } from "@/lib/client-sdk/tenant-users.client-api";
+import { InviteUserRequest } from "@/spaces/platform/client-sdk/tenant-users.client-api";
 
 type UserRole = "admin" | "member" | "viewer";
 

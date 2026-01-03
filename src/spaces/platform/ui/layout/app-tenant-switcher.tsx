@@ -19,17 +19,18 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/ui-primitives/ui/sidebar";
-import { Dialog, DialogContent } from "../ui/dialog";
+import { Dialog, DialogContent } from "@/ui-primitives/ui/dialog";
 
-import { TenantCreateForm } from "@/components/tenant/tenant-create-form";
-import { Tables } from "@/types/database.types";
-import { useClientUserSDK } from "@/lib/contexts/client-user-sdk.context";
-import { useClientTenantSDK } from "@/lib/contexts/client-tenant-sdk.context";
+import { TenantCreateForm } from "@/spaces/platform/ui/tenant/tenant-create-form";
+
+import { usePlatformUser } from "@/spaces/platform/contexts/platform-user.context";
+import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
+import type { Tenant } from "@db/platform/types";
 
 export function AppTenantSwitcher() {
   const { isMobile } = useSidebar();
-  const { availableTenants } = useClientUserSDK();
-  const { tenant } = useClientTenantSDK();
+  const { availableTenants } = usePlatformUser();
+  const { tenant } = usePlatformTenant();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   return (
@@ -45,7 +46,7 @@ export function AppTenantSwitcher() {
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{tenant?.name}</span>
                   <span className="truncate text-xs">
-                    {tenant?.subscription_tier}
+                    {tenant ? tenant.subscriptionTier : "unknown"}
                   </span>
                 </div>
                 <ChevronsUpDown className="ml-auto" />
@@ -60,20 +61,18 @@ export function AppTenantSwitcher() {
               <DropdownMenuLabel className="text-muted-foreground text-xs">
                 Tenants
               </DropdownMenuLabel>
-              {availableTenants.map(
-                (tenant: Tables<"tenants">, index: number) => (
-                  <DropdownMenuItem
-                    key={tenant.slug}
-                    asChild
-                    className="gap-2 p-2"
-                  >
-                    <Link href={`/${tenant.slug}/dashboard`}>
-                      {tenant.name}
-                      {/* <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut> */}
-                    </Link>
-                  </DropdownMenuItem>
-                ),
-              )}
+              {availableTenants.map((tenant: Tenant, index: number) => (
+                <DropdownMenuItem
+                  key={tenant.slug}
+                  asChild
+                  className="gap-2 p-2"
+                >
+                  <Link href={`/${tenant.slug}/`}>
+                    {tenant.name}
+                    {/* <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut> */}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="gap-2 p-2"

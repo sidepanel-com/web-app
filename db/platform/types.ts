@@ -1,4 +1,4 @@
-import type { SelectModel, InsertModel } from "@/db/types";
+import type { SelectModel, InsertModel } from "../types";
 import { tenants } from "./schema";
 
 export type Tenant = SelectModel<typeof tenants>;

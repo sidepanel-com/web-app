@@ -38,7 +38,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/ui-primitives/ui/avatar";
 import {
   TenantUserListItem,
   UpdateUserRequest,
-} from "@/lib/client-sdk/tenant-users.client-api";
+} from "@/spaces/platform/client-sdk/tenant-users.client-api";
 
 type UserRole = "owner" | "admin" | "member" | "viewer";
 
