@@ -44,7 +44,6 @@ import {
   TenantUserStats,
 } from "@/spaces/platform/client-sdk/tenant-users.client-api";
 import { cn } from "@/ui-primitives/utils";
-import { useTenantUsers } from "@/hooks/use-tenant-users";
 
 type UserRole = "owner" | "admin" | "member" | "viewer";
 type UserStatus = "active" | "inactive" | "pending";
@@ -146,21 +145,16 @@ function CountCard({
 }
 
 export function TenantUsersList({
+  users,
+  stats,
+  isLoading,
+  error,
+  onInviteUser,
+  onEditUser,
+  onRemoveUser,
+  onResendInvitation,
   currentUserRole = "viewer",
 }: TenantUsersListProps) {
-  const {
-    users,
-    stats,
-    loading,
-    error,
-    loadUsers,
-    inviteUser,
-    updateUserRole,
-    updateUserStatus,
-    removeUser,
-    resendInvitation,
-    cancelInvitation,
-  } = useTenantUsers();
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   const canInviteUsers = ["owner", "admin"].includes(currentUserRole);
@@ -207,7 +201,7 @@ export function TenantUsersList({
           </CardDescription>
           <CardAction>
             {canInviteUsers && (
-              <Button onClick={() => inviteUser("test@test.com", "member")}>
+              <Button onClick={onInviteUser}>
                 <UserPlusIcon className="mr-2 h-4 w-4" />
                 Invite User
               </Button>
@@ -215,7 +209,7 @@ export function TenantUsersList({
           </CardAction>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="space-y-4">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex items-center space-x-4">
@@ -345,7 +339,7 @@ export function TenantUsersList({
             </Table>
           )}
 
-          {!loading && users.length === 0 && (
+          {!isLoading && users.length === 0 && (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No team members found.</p>
               {canInviteUsers && (

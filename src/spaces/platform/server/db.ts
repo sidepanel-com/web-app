@@ -3,6 +3,8 @@ import postgres from "postgres";
 
 import * as platformSchema from "@db/platform/schema";
 import * as platformRelations from "@db/platform/relations";
+import * as productSchema from "@db/product/schema";
+import * as productRelations from "@db/product/relations";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -18,6 +20,8 @@ export const db = drizzle(client, {
   schema: {
     ...platformSchema,
     ...platformRelations,
+    ...productSchema,
+    ...productRelations,
   },
 });
 

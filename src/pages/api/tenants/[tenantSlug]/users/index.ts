@@ -21,10 +21,10 @@ const schemas = {
 };
 
 const handlers: TenantApiHandlers<typeof schemas> = {
-  GET: async ({ dangerSupabaseAdmin, apiUser, tenantId }) => {
+  GET: async ({ db, apiUser, tenantId }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId
     );
@@ -32,7 +32,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     // Create tenant user service instance with full context including role
     const tenantUserService = TenantUserService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId,
       userRole || "viewer"
@@ -49,10 +49,10 @@ const handlers: TenantApiHandlers<typeof schemas> = {
       stats,
     };
   },
-  POST: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId }) => {
+  POST: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId, ...utils }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      utils.db,
       apiUser.id,
       tenantId
     );
@@ -60,7 +60,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     // Create tenant user invitation service instance with full context including role
     const invitationService = TenantUserInvitationService.create(
-      dangerSupabaseAdmin,
+      utils.db,
       apiUser.id,
       tenantId,
       userRole || "viewer"

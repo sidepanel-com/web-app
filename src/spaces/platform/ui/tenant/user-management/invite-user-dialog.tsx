@@ -94,12 +94,10 @@ export function InviteUserDialog({
   const allowedRoles = availableRoles[currentUserRole] || [];
 
   const onSubmit = async (data: InviteUserFormValues) => {
-    console.log("!!!data", data);
     try {
       setError(null);
       await onInviteUser?.(data);
       form.reset();
-      // onOpenChange(false)
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to send invitation",

@@ -19,6 +19,7 @@ import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.co
 import { usePlatformUser } from "@/spaces/platform/contexts/platform-user.context";
 
 import { toast } from "sonner";
+import { useTenantUsers } from "@/hooks/use-tenant-users";
 
 export function TenantUsersContainer() {
   const { tenant } = usePlatformTenant();
@@ -98,7 +99,7 @@ export function TenantUsersContainer() {
 
   const handleRemoveSuccess = async (userId: string) => {
     try {
-      await tenantSdk?.tenantUsers.removeUser(userId);
+      await removeUser(userId);
       toast.success("The user has been successfully removed from the team");
       setRemoveUserDialogOpen(false);
       setSelectedUser(null);
@@ -148,8 +149,11 @@ export function TenantUsersContainer() {
         open={inviteDialogOpen}
         onOpenChange={setInviteDialogOpen}
         onInviteUser={async (data) => {
-          console.log(data);
+          await inviteUser(data.email, data.role as any, data.message);
+          setInviteDialogOpen(false);
         }}
+        isLoading={loading}
+        currentUserRole="admin" // TODO: Get from context/session
       />
       {/*
       <EditUserRoleDialog

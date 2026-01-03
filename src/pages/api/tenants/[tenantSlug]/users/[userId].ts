@@ -24,10 +24,10 @@ const schemas = {
 
 const handlers: TenantApiHandlers<typeof schemas> = {
   // Get specific user details
-  GET: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId }) => {
+  GET: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId
     );
@@ -35,7 +35,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     // Create tenant user service with full context
     const tenantUserService = TenantUserService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId,
       userRole || "viewer"
@@ -51,10 +51,10 @@ const handlers: TenantApiHandlers<typeof schemas> = {
   },
 
   // Update user role, status, or permissions
-  PATCH: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId }) => {
+  PATCH: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId
     );
@@ -62,7 +62,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     // Create tenant user service with full context
     const tenantUserService = TenantUserService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId,
       userRole || "viewer"
@@ -106,10 +106,10 @@ const handlers: TenantApiHandlers<typeof schemas> = {
   },
 
   // Remove user from tenant
-  DELETE: async ({ dangerSupabaseAdmin, requestData, apiUser, tenantId }) => {
+  DELETE: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId
     );
@@ -117,7 +117,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     // Create tenant user service with full context
     const tenantUserService = TenantUserService.create(
-      dangerSupabaseAdmin,
+      db,
       apiUser.id,
       tenantId,
       userRole || "viewer"
