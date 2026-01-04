@@ -5,12 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/ui-primitives/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/ui-primitives/ui/sheet";
 import {
   Form,
   FormControl,
@@ -120,11 +120,11 @@ export function CompanyFormDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] h-[600px] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle>{company ? "Edit Company" : "Add New Company"}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full max-w-none flex flex-col p-0 overflow-hidden data-[state=open]:duration-200 data-[state=closed]:duration-150">
+        <SheetHeader className="p-6 pb-2">
+          <SheetTitle>{company ? "Edit Company" : "Add New Company"}</SheetTitle>
+        </SheetHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="mx-6 grid grid-cols-3">
@@ -375,7 +375,7 @@ export function CompanyFormDialog({
           </ScrollArea>
         </Tabs>
 
-        <DialogFooter className="p-6 pt-2 border-t flex-row gap-2 justify-between items-center">
+        <SheetFooter className="p-6 pt-2 border-t flex-row gap-2 justify-between items-center">
           {company && onDelete ? (
             <Button
               type="button"
@@ -395,8 +395,8 @@ export function CompanyFormDialog({
           >
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
