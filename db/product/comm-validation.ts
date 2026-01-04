@@ -50,14 +50,14 @@ export type CommType = keyof typeof commValueSchemas;
 function normalizePhoneNumber(input: string): string {
   // Strip all non-digit characters except for a leading plus
   let cleaned = input.replace(/[^\d+]/g, "");
-  
+
   // If it doesn't start with a plus, we assume it's missing the plus (simplified)
   // In a real app, you'd use a library like libphonenumber-js
   if (cleaned.length > 0 && !cleaned.startsWith("+")) {
     if (cleaned.length === 10) {
-        cleaned = `+1${cleaned}`; // Default to US/Canada
+      cleaned = `+1${cleaned}`; // Default to US/Canada
     } else {
-        cleaned = `+${cleaned}`;
+      cleaned = `+${cleaned}`;
     }
   }
   return cleaned;
@@ -83,10 +83,15 @@ function extractLinkedInVanityName(url: string): string {
 /**
  * Main normalization function
  */
-export function normalizeComm(type: CommType, input: any): { value: any; canonicalValue: string } {
+export function normalizeComm(
+  type: CommType,
+  input: any
+): { value: any; canonicalValue: string } {
   switch (type) {
     case "email": {
-      const parsed = emailValueSchema.parse(typeof input === "string" ? { address: input } : input);
+      const parsed = emailValueSchema.parse(
+        typeof input === "string" ? { address: input } : input
+      );
       return {
         value: parsed,
         canonicalValue: parsed.address,
@@ -164,4 +169,3 @@ export function formatCommValue(type: CommType, value: any): string {
       return typeof value === "string" ? value : JSON.stringify(value);
   }
 }
-
