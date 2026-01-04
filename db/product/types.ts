@@ -1,4 +1,58 @@
-import { items } from "./schema";
+import type {
+  people,
+  companies,
+  peopleCompanies,
+  comms,
+  commsPeople,
+  commsCompanies,
+  emails,
+  emailComms,
+  meetings,
+  meetingsComms,
+  calls,
+  callComms,
+  messages,
+  messageComms,
+} from "./schema";
 
-export type ProductItem = typeof items.$inferSelect;
-export type NewProductItem = typeof items.$inferInsert;
+export type Person = typeof people.$inferSelect;
+export type NewPerson = typeof people.$inferInsert;
+
+export type Company = typeof companies.$inferSelect;
+export type NewCompany = typeof companies.$inferInsert;
+
+export type PersonCompany = typeof peopleCompanies.$inferSelect;
+export type NewPersonCompany = typeof peopleCompanies.$inferInsert;
+
+export type Comm = typeof comms.$inferSelect;
+export type NewComm = typeof comms.$inferInsert;
+
+export type CommPerson = typeof commsPeople.$inferSelect;
+export type NewCommPerson = typeof commsPeople.$inferInsert;
+
+export type CommCompany = typeof commsCompanies.$inferSelect;
+export type NewCommCompany = typeof commsCompanies.$inferInsert;
+
+export type Email = typeof emails.$inferSelect;
+export type NewEmail = typeof emails.$inferInsert;
+
+export type EmailComm = typeof emailComms.$inferSelect;
+export type NewEmailComm = typeof emailComms.$inferInsert;
+
+export type Meeting = typeof meetings.$inferSelect;
+export type NewMeeting = typeof meetings.$inferInsert;
+
+export type MeetingComm = typeof meetingsComms.$inferSelect;
+export type NewMeetingComm = typeof meetingsComms.$inferInsert;
+
+export type Call = typeof calls.$inferSelect;
+export type NewCall = typeof calls.$inferInsert;
+
+export type CallComm = typeof callComms.$inferSelect;
+export type NewCallComm = typeof callComms.$inferInsert;
+
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
+
+export type MessageComm = typeof messageComms.$inferSelect;
+export type NewMessageComm = typeof messageComms.$inferInsert;
