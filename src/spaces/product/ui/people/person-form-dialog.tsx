@@ -22,6 +22,16 @@ import {
 import { Input } from "@/ui-primitives/ui/input";
 import { Textarea } from "@/ui-primitives/ui/textarea";
 import { Button } from "@/ui-primitives/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/ui-primitives/ui/alert-dialog";
 import { Person, Company, Comm } from "@db/product/types";
 import { Trash2, Plus, X, Building2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui-primitives/ui/tabs";
@@ -64,6 +74,7 @@ export function PersonFormDialog({
   onRemoveComm,
 }: PersonFormDialogProps) {
   const [activeTab, setActiveTab] = useState("details");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { companies: allCompanies } = useCompanies();
   const [companySearch, setCompanySearch] = useState("");
   const [newCompanyName, setNewCompanyName] = useState("");
@@ -351,14 +362,35 @@ export function PersonFormDialog({
 
         <SheetFooter className="p-6 pt-2 border-t flex-row gap-2 justify-between items-center">
           {person && onDelete ? (
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              onClick={handleDelete}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent className="max-w-sm">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Person</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{person.firstName} {person.lastName}"? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           ) : (
             <div />
           )}
