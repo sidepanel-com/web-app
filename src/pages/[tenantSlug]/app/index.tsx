@@ -1,15 +1,19 @@
-import { GetServerSideProps } from "next";
+import type { GetServerSideProps } from "next";
+import { useRouter } from "next/router";
 import { createClient } from "@/spaces/identity/supabase.server-props";
 import { AppPage } from "@/spaces/platform/ui/layout/app-page";
 import { MobileDevice } from "@/spaces/product/ui/mobile-device";
-import { CrmApp } from "@/spaces/product/ui/crm-app";
 
 export default function AppDashboardPage() {
+  const router = useRouter();
+  const tenantSlug = router.query.tenantSlug as string;
+
   return (
     <AppPage>
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <MobileDevice>
-          <CrmApp />
+          <iframe src={`${process.env.NEXT_PUBLIC_SITE_URL}/${tenantSlug}/wrapped`}
+            title="Wrapped App" className="w-full h-full" />
         </MobileDevice>
       </div>
     </AppPage>
@@ -17,7 +21,7 @@ export default function AppDashboardPage() {
 }
 
 // Mark this page as requiring a tenant
-(AppDashboardPage as any).requiresTenant = true;
+AppDashboardPage.requiresTenant = true;
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const supabase = createClient(ctx);
