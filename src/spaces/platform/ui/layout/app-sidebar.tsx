@@ -17,11 +17,6 @@ import { productNavigation } from "@/spaces/product/navigation";
 
 // This is sample data.
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   tenants: [
     {
       title: "Settings",
@@ -66,7 +61,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <AppNavSection title="Tenants" items={data.tenants} />
       </SidebarContent>
       <SidebarFooter>
-        <AppNavUser user={data.user} />
+        <AppNavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

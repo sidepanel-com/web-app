@@ -1,6 +1,6 @@
 import { GetServerSideProps } from "next";
 import { createClient } from "@/spaces/identity/supabase.server-props";
-import { AppPage } from "@/spaces/platform/ui/app/app-page";
+import { AppPage } from "@/spaces/platform/ui/layout/app-page";
 
 export default function SettingsPage() {
   return (

@@ -1,13 +1,13 @@
 import { GetServerSideProps } from "next";
 import { createClient } from "@/spaces/identity/supabase.server-props";
-import { AppPage } from "@/spaces/platform/ui/app/app-page";
+import { AppPage } from "@/spaces/platform/ui/layout/app-page";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/spaces/platform/ui/ui/card";
+} from "@/ui-primitives/ui/card";
 
 export default function LimitsSettingsPage() {
   return (
