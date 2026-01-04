@@ -3,7 +3,10 @@
 import { useMemo } from "react";
 import { useAuth } from "@/spaces/identity/identity-auth.context";
 import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
-import { createProductClientSDK, ProductClientSDK } from "@/spaces/product/client-sdk";
+import {
+  createProductClientSDK,
+  type ProductClientSDK,
+} from "@/spaces/product/client-sdk";
 
 export function useProductSdk(): ProductClientSDK | null {
   const { session } = useAuth();
@@ -25,4 +28,3 @@ export function useProductSdk(): ProductClientSDK | null {
 
   return sdk;
 }
-
