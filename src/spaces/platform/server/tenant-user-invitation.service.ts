@@ -2,6 +2,7 @@ import { and, eq, sql, desc, lt } from "drizzle-orm";
 import { InferSelectModel } from "drizzle-orm";
 import { BaseEntityService, PermissionContext } from "./base-entity.service";
 import crypto from "crypto";
+import { SupabaseClient } from "@supabase/supabase-js";
 import {
   tenantInvitations,
   tenantUsers,
@@ -31,8 +32,15 @@ export interface InvitationWithDetails extends TenantInvitation {
 }
 
 export class TenantUserInvitationService extends BaseEntityService {
-  constructor(db: any, permissionContext: PermissionContext) {
+  private supabaseAdmin: SupabaseClient;
+
+  constructor(
+    db: any,
+    supabaseAdmin: SupabaseClient,
+    permissionContext: PermissionContext
+  ) {
     super(db, permissionContext);
+    this.supabaseAdmin = supabaseAdmin;
   }
 
   // Permission checks
@@ -125,8 +133,29 @@ export class TenantUserInvitationService extends BaseEntityService {
       .values(values)
       .returning();
 
-    // Send invitation email
-    await this.sendInvitationEmail(invitation, invitationData.message);
+    // Leverage Supabase Admin API for user invitations
+    // The redirectTo should point to our application's invitation acceptance page
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const redirectTo = `${siteUrl}/auth/accept-invitation?token=${token}`;
+
+    console.log("redirectTo", redirectTo);
+    const { error: inviteError } =
+      await this.supabaseAdmin.auth.admin.inviteUserByEmail(
+        invitationData.email,
+        {
+          redirectTo,
+          data: {
+            invitationId: invitation.id,
+            tenantId: this.permissionContext.tenantId,
+          },
+        }
+      );
+
+    if (inviteError) {
+      console.error("Supabase invite error:", inviteError);
+      // We still have the record in tenant_invitations, but the email failed.
+      throw new Error(`Failed to send invitation: ${inviteError.message}`);
+    }
 
     return invitation;
   }
@@ -476,11 +505,12 @@ export class TenantUserInvitationService extends BaseEntityService {
   // Static factory method
   static create(
     db: any,
+    supabaseAdmin: SupabaseClient,
     userId: string,
     tenantId: string,
     userRole: UserRole
   ): TenantUserInvitationService {
-    return new TenantUserInvitationService(db, {
+    return new TenantUserInvitationService(db, supabaseAdmin, {
       userId,
       tenantId,
       userRole,

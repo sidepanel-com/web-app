@@ -13,7 +13,7 @@ const schemas = {
 };
 
 const handlers: TenantApiHandlers<typeof schemas> = {
-  GET: async ({ db, apiUser, tenantId }) => {
+  GET: async ({ db, dangerSupabaseAdmin, apiUser, tenantId }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(db, apiUser.id, tenantId);
     const userRole = await tempTenantService.getUserRoleInTenant(tenantId);
@@ -28,6 +28,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
 
     const invitationService = TenantUserInvitationService.create(
       db,
+      dangerSupabaseAdmin,
       apiUser.id,
       tenantId,
       userRole || "viewer"
@@ -48,7 +49,9 @@ const handlers: TenantApiHandlers<typeof schemas> = {
       status: "pending",
       joined_at: inv.createdAt,
       invited_by: inv.invited_by_user
-        ? `${inv.invited_by_user.first_name || ""} ${inv.invited_by_user.last_name || ""}`.trim() || null
+        ? `${inv.invited_by_user.first_name || ""} ${
+            inv.invited_by_user.last_name || ""
+          }`.trim() || null
         : null,
       invited_by_email: null,
       email: inv.email,
@@ -64,17 +67,21 @@ const handlers: TenantApiHandlers<typeof schemas> = {
     // Merge stats
     const stats = {
       ...userStats,
-      total: userStats.total + invitations.filter(i => i.status === 'pending').length,
-      pending: userStats.pending + invitations.filter(i => i.status === 'pending').length,
+      total:
+        userStats.total +
+        invitations.filter((i) => i.status === "pending").length,
+      pending:
+        userStats.pending +
+        invitations.filter((i) => i.status === "pending").length,
     };
 
     // Update byRole stats with invitations
     invitations.forEach((inv) => {
-      if (inv.status === 'pending' && inv.role) {
+      if (inv.status === "pending" && inv.role) {
         if (stats.byRole[inv.role] !== undefined) {
           stats.byRole[inv.role]++;
         } else {
-           // @ts-ignore
+          // @ts-ignore
           stats.byRole[inv.role] = 1;
         }
       }

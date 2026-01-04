@@ -14,9 +14,10 @@ const schemas = {
 
 const handlers: UserApiHandlers<typeof schemas> = {
   // Get invitation details by token
-  GET: async ({ dangerSupabaseAdmin, requestData }) => {
+  GET: async ({ db, dangerSupabaseAdmin, requestData }) => {
     // Create invitation service without user context for token lookup
     const invitationService = new TenantUserInvitationService(
+      db,
       dangerSupabaseAdmin,
       { userId: "", tenantId: "" } // Minimal context for token lookup
     );
@@ -42,9 +43,10 @@ const handlers: UserApiHandlers<typeof schemas> = {
   },
 
   // Accept invitation
-  POST: async ({ dangerSupabaseAdmin, requestData, apiUser }) => {
+  POST: async ({ db, dangerSupabaseAdmin, requestData, apiUser }) => {
     // Create invitation service without user context for token lookup
     const invitationService = new TenantUserInvitationService(
+      db,
       dangerSupabaseAdmin,
       { userId: "", tenantId: "" } // Minimal context for token lookup
     );

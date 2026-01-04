@@ -13,6 +13,8 @@ import { PlatformTenantProvider } from "@/spaces/platform/contexts/platform-tena
 import { NoTenantSelected } from "@/spaces/platform/ui/entry/no-tenant-selected";
 import "@/styles/globals.css";
 
+const DEBUG_MODE = true;
+
 function AppGuard({
   children,
   isPublic,
@@ -23,6 +25,11 @@ function AppGuard({
   const router = useRouter();
   const { session, isLoading } = useAuth();
 
+  if (DEBUG_MODE) {
+    console.log("DEBUG_MODE: isPublic", isPublic);
+    console.log("DEBUG_MODE: isLoading", isLoading);
+    console.log("DEBUG_MODE: session", session);
+  }
   if (!isPublic) {
     if (isLoading) return null;
     if (!session) {
@@ -39,6 +46,11 @@ function TenantBoundary({ Component, pageProps }: AppProps) {
   const tenantSlug = router.query.tenantSlug as string | undefined;
   const requiresTenant = (Component as any).requiresTenant === true;
 
+  if (DEBUG_MODE) {
+    console.log("DEBUG_MODE: requiresTenant", requiresTenant);
+    console.log("DEBUG_MODE: tenantSlug", tenantSlug);
+    console.log("DEBUG_MODE: router", router);
+  }
   if (requiresTenant && !tenantSlug) {
     return <NoTenantSelected />;
   }

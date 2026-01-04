@@ -18,6 +18,8 @@ import Link from "next/link";
 import BlockTerms from "@/spaces/identity/ui/block-terms";
 import ButtonGoogleAuth from "./button-google-auth";
 
+const SIGNUP_WITH_GOOGLE_AUTH = false;
+
 export default function SignupForm({
   className,
   ...props
@@ -62,6 +64,7 @@ export default function SignupForm({
     }
   }
 
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
@@ -72,18 +75,21 @@ export default function SignupForm({
         <CardContent>
           <form onSubmit={signUpWithEmail}>
             <div className="grid gap-6">
-              <div className="flex flex-col gap-4">
-                <ButtonGoogleAuth
-                  text="Sign up with Google"
-                  onClick={signUpWithGoogle}
-                  isLoading={isLoading}
-                />
-              </div>
-              <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-                <span className="bg-card text-muted-foreground relative z-10 px-2">
-                  Or continue with
-                </span>
-              </div>
+              {SIGNUP_WITH_GOOGLE_AUTH ? (
+                <>
+                  <div className="flex flex-col gap-4">
+                    <ButtonGoogleAuth
+                      text="Sign up with Google"
+                      onClick={signUpWithGoogle}
+                      isLoading={isLoading}
+                    />
+                  </div>
+                  <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
+                    <span className="bg-card text-muted-foreground relative z-10 px-2">
+                      Or continue with
+                    </span>
+                  </div></>
+              ) : <></>}
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />

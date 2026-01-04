@@ -11,9 +11,10 @@ const schemas = {
 
 const handlers: ApiHandlers<typeof schemas> = {
   // Decline invitation (no auth required)
-  POST: async ({ dangerSupabaseAdmin, requestData }) => {
+  POST: async ({ db, dangerSupabaseAdmin, requestData }) => {
     // Create invitation service without user context for token lookup
     const invitationService = new TenantUserInvitationService(
+      db,
       dangerSupabaseAdmin,
       { userId: "", tenantId: "" } // Minimal context for token lookup
     );

@@ -3,8 +3,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { ZodType, ZodError } from "zod";
 import { createServerClient } from "@/spaces/identity/supabase.server-api";
+import { danger_supabaseAdmin } from "@/spaces/identity/supabase.server-admin";
 import { ApiError } from "./next-api-errors";
-// import { danger_supabaseAdmin } from "@/spaces/identity/supabase.server-admin"; // Removed
 import { db, DrizzleClient } from "./db";
 
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -31,7 +31,8 @@ type ApiUser = {
 // shape of utilities passed into each handler
 export interface ApiUtilities<Data = any> {
   supabaseUserClient: ReturnType<typeof createServerClient>;
-  db: DrizzleClient; // Replaced dangerSupabaseAdmin
+  dangerSupabaseAdmin: SupabaseClient;
+  db: DrizzleClient;
   requestData: Data;
   apiUser: ApiUser;
   handleValidationError: (err: ZodError) => void;
@@ -185,6 +186,7 @@ export class ApiService<SM extends SchemaMap> {
       // build the utilities object
       const utils: ApiUtilities = {
         supabaseUserClient: supabaseClient,
+        dangerSupabaseAdmin: danger_supabaseAdmin,
         db: db,
         requestData,
         apiUser,
@@ -294,6 +296,7 @@ export class UserApiService<SM extends SchemaMap> extends ApiService<SM> {
       // Build the user utilities object
       const utils: UserApiUtilities = {
         supabaseUserClient: supabaseClient,
+        dangerSupabaseAdmin: danger_supabaseAdmin,
         db: db,
         requestData,
         apiUser,
@@ -459,6 +462,7 @@ export class PathTenantApiService<SM extends SchemaMap> extends ApiService<SM> {
       // Build the enhanced utilities object with tenantId and tenantSlug
       const utils: TenantApiUtilities = {
         supabaseUserClient: supabaseClient,
+        dangerSupabaseAdmin: danger_supabaseAdmin,
         db: db,
         requestData,
         apiUser,

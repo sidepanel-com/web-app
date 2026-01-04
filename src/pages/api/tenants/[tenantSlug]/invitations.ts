@@ -13,7 +13,7 @@ const schemas = {
 
 const handlers: TenantApiHandlers<typeof schemas> = {
   // List all invitations for the tenant
-  GET: async ({ db, apiUser, tenantId }) => {
+  GET: async ({ db, dangerSupabaseAdmin, apiUser, tenantId }) => {
     // Get user's role in this tenant first
     const tempTenantService = TenantService.create(
       db,
@@ -25,6 +25,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
     // Create invitation service with full context
     const invitationService = TenantUserInvitationService.create(
       db,
+      dangerSupabaseAdmin,
       apiUser.id,
       tenantId,
       userRole || "viewer"
