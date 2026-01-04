@@ -38,7 +38,7 @@ export function AppNavTenants({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Tenants</SidebarGroupLabel>
+      <SidebarGroupLabel>Organization</SidebarGroupLabel>
       <SidebarMenu>
         {tenants.map((item) => (
           <SidebarMenuItem key={item.name}>

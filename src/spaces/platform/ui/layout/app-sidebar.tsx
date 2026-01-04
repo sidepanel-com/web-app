@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Settings } from "lucide-react";
+import { Plug2, Settings } from "lucide-react";
 
 import { AppNavSection } from "./app-nav-section";
 import { AppTenantSwitcher } from "./app-tenant-switcher";
@@ -18,6 +18,11 @@ import { productNavigation } from "@/spaces/product/navigation";
 // This is sample data.
 const data = {
   tenants: [
+    {
+      title: "Connections",
+      url: "#",
+      icon: Plug2,
+    },
     {
       title: "Settings",
       url: "#",
@@ -58,7 +63,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             items={section.items}
           />
         ))}
-        <AppNavSection title="Tenants" items={data.tenants} />
+        <AppNavSection title="Organization" items={data.tenants} />
       </SidebarContent>
       <SidebarFooter>
         <AppNavUser />

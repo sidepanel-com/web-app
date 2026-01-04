@@ -14,17 +14,22 @@ This directory is for product-specific database schemas. The platform schema is 
 ## Example Table
 
 ```typescript
-export const items = product.table('items', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    tenantId: uuid('tenant_id').notNull(),
-    name: text('name').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-}, (t) => ([
+export const items = product.table(
+  "items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
     foreignKey({
-        columns: [t.tenantId],
-        foreignColumns: [tenants.id],
-        name: 'items_tenant_id_fkey'
-    }).onDelete('cascade'),
-]));
+      columns: [t.tenantId],
+      foreignColumns: [tenants.id],
+      name: "items_tenant_id_fkey",
+    }).onDelete("cascade"),
+  ]
+);
 ```
-
