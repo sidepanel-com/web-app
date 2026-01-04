@@ -139,7 +139,7 @@ export class TenantUserInvitationService extends BaseEntityService {
     const redirectTo = `${siteUrl}/auth/accept-invitation?token=${token}`;
 
     console.log("redirectTo", redirectTo);
-    const { error: inviteError } =
+    let { error: inviteError } =
       await this.supabaseAdmin.auth.admin.inviteUserByEmail(
         invitationData.email,
         {
@@ -150,6 +150,35 @@ export class TenantUserInvitationService extends BaseEntityService {
           },
         }
       );
+
+    // If user already exists, Supabase might return email_exists error.
+    // In that case, we check if the user is unconfirmed and re-invite them.
+    if (inviteError && inviteError.status === 422) {
+      console.log("User already exists, checking if unconfirmed...");
+      const { data: linkData } =
+        await this.supabaseAdmin.auth.admin.generateLink({
+          type: "invite",
+          email: invitationData.email,
+          options: { redirectTo },
+        });
+
+      if (linkData?.user && !linkData.user.email_confirmed_at) {
+        console.log("User is unconfirmed, deleting and re-inviting...");
+        await this.supabaseAdmin.auth.admin.deleteUser(linkData.user.id);
+        const { error: retryError } =
+          await this.supabaseAdmin.auth.admin.inviteUserByEmail(
+            invitationData.email,
+            {
+              redirectTo,
+              data: {
+                invitationId: invitation.id,
+                tenantId: this.permissionContext.tenantId,
+              },
+            }
+          );
+        inviteError = retryError;
+      }
+    }
 
     if (inviteError) {
       console.error("Supabase invite error:", inviteError);
@@ -337,8 +366,10 @@ export class TenantUserInvitationService extends BaseEntityService {
       .limit(1);
 
     if (!invitation) throw new Error("Invitation not found");
-    if (invitation.status !== "pending")
-      throw new Error("Can only resend pending invitations");
+
+    // Allow resending if pending or expired
+    if (invitation.status !== "pending" && invitation.status !== "expired")
+      throw new Error("Can only resend pending or expired invitations");
 
     // Generate new token
     const newToken = this.generateInvitationToken();
@@ -350,11 +381,57 @@ export class TenantUserInvitationService extends BaseEntityService {
       .set({
         token: newToken,
         expiresAt: newExpiresAt.toISOString(),
+        status: "pending", // Reset status if it was previously expired
       })
       .where(eq(tenantInvitations.id, invitationId))
       .returning();
 
-    await this.sendInvitationEmail(updatedInvitation);
+    // Leverage Supabase Admin API for user invitations
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const redirectTo = `${siteUrl}/auth/accept-invitation?token=${newToken}`;
+
+    let { error: inviteError } =
+      await this.supabaseAdmin.auth.admin.inviteUserByEmail(invitation.email, {
+        redirectTo,
+        data: {
+          invitationId: updatedInvitation.id,
+          tenantId: this.permissionContext.tenantId,
+        },
+      });
+
+    // If user already exists, Supabase might return email_exists error.
+    // In that case, we check if the user is unconfirmed and re-invite them.
+    if (inviteError && inviteError.status === 422) {
+      console.log("User already exists, checking if unconfirmed...");
+      const { data: linkData } =
+        await this.supabaseAdmin.auth.admin.generateLink({
+          type: "invite",
+          email: invitation.email,
+          options: { redirectTo },
+        });
+
+      if (linkData?.user && !linkData.user.email_confirmed_at) {
+        console.log("User is unconfirmed, deleting and re-inviting...");
+        await this.supabaseAdmin.auth.admin.deleteUser(linkData.user.id);
+        const { error: retryError } =
+          await this.supabaseAdmin.auth.admin.inviteUserByEmail(
+            invitation.email,
+            {
+              redirectTo,
+              data: {
+                invitationId: updatedInvitation.id,
+                tenantId: this.permissionContext.tenantId,
+              },
+            }
+          );
+        inviteError = retryError;
+      }
+    }
+
+    if (inviteError) {
+      console.error("Supabase resend invite error:", inviteError);
+      throw new Error(`Failed to resend invitation: ${inviteError.message}`);
+    }
 
     return updatedInvitation;
   }
