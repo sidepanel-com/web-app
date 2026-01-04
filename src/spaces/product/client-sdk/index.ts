@@ -1,9 +1,10 @@
 import { ApiClient, ApiClientOptions, ApiResponse } from "@/spaces/platform/client-sdk";
 import { PeopleClientAPI } from "./people.client-api";
+import { CompaniesClientAPI } from "./companies.client-api";
 
 export interface ProductClientSDK {
   people: PeopleClientAPI;
-  // Future: companies: CompaniesClientAPI;
+  companies: CompaniesClientAPI;
 }
 
 export function createProductClientSDK(
@@ -17,6 +18,7 @@ export function createProductClientSDK(
 
   return {
     people: new PeopleClientAPI(client, tenantSlug),
+    companies: new CompaniesClientAPI(client, tenantSlug),
   };
 }
 

@@ -1,6 +1,7 @@
-import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui-primitives/ui/tabs";
 import { Home, Users, Building2, MessageSquare } from "lucide-react";
+import { PeopleView } from "./people/people-view";
+import { CompaniesView } from "./companies/companies-view";
 
 export function CrmApp() {
   return (
@@ -54,28 +55,12 @@ export function CrmApp() {
             </div>
           </TabsContent>
 
-          <TabsContent value="people" className="mt-0">
-            <h2 className="text-xl font-bold mb-4">People</h2>
-            <div className="space-y-2">
-              {['Alice Johnson', 'Bob Smith', 'Charlie Brown'].map(name => (
-                <div key={name} className="p-3 bg-muted/50 rounded-md border flex items-center justify-between">
-                  <span>{name}</span>
-                  <button className="text-xs text-primary" type="button">View</button>
-                </div>
-              ))}
-            </div>
+          <TabsContent value="people" className="mt-0 h-full">
+            <PeopleView />
           </TabsContent>
 
-          <TabsContent value="companies" className="mt-0">
-            <h2 className="text-xl font-bold mb-4">Companies</h2>
-            <div className="space-y-2">
-              {['Acme Corp', 'Globex', 'Soylent Corp'].map(name => (
-                <div key={name} className="p-3 bg-muted/50 rounded-md border flex items-center justify-between">
-                  <span>{name}</span>
-                  <button className="text-xs text-primary" type="button">View</button>
-                </div>
-              ))}
-            </div>
+          <TabsContent value="companies" className="mt-0 h-full">
+            <CompaniesView />
           </TabsContent>
 
           <TabsContent value="comms" className="mt-0">
