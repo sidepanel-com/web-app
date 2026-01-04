@@ -11,7 +11,7 @@ export const productNavigation: NavSection[] = [
     items: [
       {
         title: "App",
-        url: "/app",
+        url: "/",
         icon: Smartphone,
       },
     ],
