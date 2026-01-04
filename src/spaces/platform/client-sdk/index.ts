@@ -9,6 +9,7 @@ import { InvitationsClientAPI } from "./invitations.client-api";
 export interface ApiClientOptions {
   baseUrl?: string;
   accessToken: string;
+  tenantSlug?: string;
   timeout?: number;
 }
 
@@ -57,13 +58,19 @@ export class ApiClient {
 
   constructor(options: ApiClientOptions) {
     // Create axios instance with all configuration
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${options.accessToken}`,
+    };
+
+    if (options.tenantSlug) {
+      headers["X-Tenant-Slug"] = options.tenantSlug;
+    }
+
     this.axios = axios.create({
       baseURL: options.baseUrl || "/api",
       timeout: options.timeout || 10000,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${options.accessToken}`,
-      },
+      headers,
     });
 
     // Response interceptor to handle your server's response format
