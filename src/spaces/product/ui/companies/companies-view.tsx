@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { CompaniesList } from "./companies-list";
 import { CompanyFormDialog } from "./company-form-dialog";
 import { useCompanies } from "@/spaces/product/hooks/use-companies";
-import { Company, Person, Comm } from "@db/product/types";
+import type { Company, Person, Comm } from "@db/product/types";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -20,7 +20,6 @@ export function CompaniesView() {
     addPerson,
     createAndLinkPerson,
     removePerson,
-    addComm,
     createAndLinkComm,
     removeComm,
   } = useCompanies();
@@ -80,7 +79,11 @@ export function CompaniesView() {
 
   const handleAddComm = async (type: string, value: any) => {
     if (selectedCompany) {
-      const comm = await createAndLinkComm(selectedCompany.id, { type: type as any, value });
+      const comm = await createAndLinkComm(selectedCompany.id, {
+        type: type as any,
+        value,
+        canonicalValue: value, // or provide canonical formatting logic if required
+      });
       if (comm) await refreshCompany();
     }
   };
