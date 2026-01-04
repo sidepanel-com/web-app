@@ -1,13 +1,18 @@
-import { ApiClient, ApiResponse } from "@/spaces/platform/client-sdk";
-import { Person, NewPerson } from "@db/product/types";
+import type { ApiClient, ApiResponse } from "@/spaces/platform/client-sdk";
+import type {
+  Person,
+  NewPerson,
+  Company,
+  NewCompany,
+  Comm,
+  NewComm,
+} from "@db/product/types";
 
 export class PeopleClientAPI {
   private fetchClient: ApiClient;
-  private tenantSlug: string;
 
-  constructor(fetchClient: ApiClient, tenantSlug: string) {
+  constructor(fetchClient: ApiClient, _tenantSlug: string) {
     this.fetchClient = fetchClient;
-    this.tenantSlug = tenantSlug;
   }
 
   async getPeople() {
@@ -40,6 +45,75 @@ export class PeopleClientAPI {
 
   async deletePerson(personId: string) {
     const response = await this.fetchClient.delete(`/v1/people/${personId}`);
+    return response as ApiResponse<{ success: boolean }>;
+  }
+
+  /* =========================
+     ASSOCIATIONS (COMPANIES)
+  ========================= */
+
+  async addCompany(
+    personId: string,
+    companyId: string,
+    role?: string,
+    isPrimary?: boolean
+  ) {
+    const response = await this.fetchClient.post(
+      `/v1/people/${personId}/companies`,
+      { companyId, role, isPrimary }
+    );
+    return response as ApiResponse<{ success: boolean }>;
+  }
+
+  async createNewCompany(
+    personId: string,
+    data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">,
+    role?: string,
+    isPrimary?: boolean
+  ) {
+    const response = await this.fetchClient.post(
+      `/v1/people/${personId}/companies`,
+      { ...data, role, isPrimary }
+    );
+    return response as ApiResponse<Company>;
+  }
+
+  async removeCompany(personId: string, companyId: string) {
+    const response = await this.fetchClient.delete(
+      `/v1/people/${personId}/companies`,
+      { params: { companyId } }
+    );
+    return response as ApiResponse<{ success: boolean }>;
+  }
+
+  /* =========================
+     ASSOCIATIONS (COMMS)
+  ========================= */
+
+  async addComm(personId: string, commId: string) {
+    const response = await this.fetchClient.post(
+      `/v1/people/${personId}/comms`,
+      { commId }
+    );
+    return response as ApiResponse<{ success: boolean }>;
+  }
+
+  async createNewComm(
+    personId: string,
+    data: Omit<NewComm, "id" | "tenantId" | "createdAt" | "updatedAt">
+  ) {
+    const response = await this.fetchClient.post(
+      `/v1/people/${personId}/comms`,
+      data
+    );
+    return response as ApiResponse<Comm>;
+  }
+
+  async removeComm(personId: string, commId: string) {
+    const response = await this.fetchClient.delete(
+      `/v1/people/${personId}/comms`,
+      { params: { commId } }
+    );
     return response as ApiResponse<{ success: boolean }>;
   }
 }

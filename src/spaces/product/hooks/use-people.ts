@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useProductSdk } from "./use-product-sdk";
-import { Person, NewPerson } from "@db/product/types";
+import { Person, NewPerson, Company, NewCompany, Comm, NewComm } from "@db/product/types";
 import { toast } from "sonner";
 
 export function usePeople() {
@@ -28,6 +28,19 @@ export function usePeople() {
     } finally {
       setIsLoading(false);
     }
+  }, [sdk]);
+
+  const getPerson = useCallback(async (personId: string) => {
+    if (!sdk) return null;
+    try {
+      const response = await sdk.people.getPerson(personId);
+      if (response.success && response.data) {
+        return response.data;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return null;
   }, [sdk]);
 
   const createPerson = async (data: Omit<NewPerson, "id" | "tenantId" | "createdAt" | "updatedAt">) => {
@@ -85,6 +98,131 @@ export function usePeople() {
     }
   };
 
+  /* =========================
+     ASSOCIATIONS (COMPANIES)
+  ========================= */
+
+  const addCompany = async (
+    personId: string,
+    companyId: string,
+    role?: string,
+    isPrimary?: boolean
+  ) => {
+    if (!sdk) return;
+    try {
+      const response = await sdk.people.addCompany(
+        personId,
+        companyId,
+        role,
+        isPrimary
+      );
+      if (response.success) {
+        toast.success("Company linked successfully");
+        return true;
+      } else {
+        toast.error(response.error || "Failed to link company");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "An error occurred");
+    }
+    return false;
+  };
+
+  const createAndLinkCompany = async (
+    personId: string,
+    data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">,
+    role?: string,
+    isPrimary?: boolean
+  ) => {
+    if (!sdk) return;
+    try {
+      const response = await sdk.people.createNewCompany(
+        personId,
+        data,
+        role,
+        isPrimary
+      );
+      if (response.success && response.data) {
+        toast.success("Company created and linked successfully");
+        return response.data;
+      } else {
+        toast.error(response.error || "Failed to create and link company");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "An error occurred");
+    }
+  };
+
+  const removeCompany = async (personId: string, companyId: string) => {
+    if (!sdk) return;
+    try {
+      const response = await sdk.people.removeCompany(personId, companyId);
+      if (response.success) {
+        toast.success("Company unlinked successfully");
+        return true;
+      } else {
+        toast.error(response.error || "Failed to unlink company");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "An error occurred");
+    }
+    return false;
+  };
+
+  /* =========================
+     ASSOCIATIONS (COMMS)
+  ========================= */
+
+  const addComm = async (personId: string, commId: string) => {
+    if (!sdk) return;
+    try {
+      const response = await sdk.people.addComm(personId, commId);
+      if (response.success) {
+        toast.success("Comm linked successfully");
+        return true;
+      } else {
+        toast.error(response.error || "Failed to link comm");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "An error occurred");
+    }
+    return false;
+  };
+
+  const createAndLinkComm = async (
+    personId: string,
+    data: Omit<NewComm, "id" | "tenantId" | "createdAt" | "updatedAt">
+  ) => {
+    if (!sdk) return;
+    try {
+      const response = await sdk.people.createNewComm(personId, data);
+      if (response.success && response.data) {
+        toast.success("Comm created and linked successfully");
+        return response.data;
+      } else {
+        toast.error(response.error || "Failed to create and link comm");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "An error occurred");
+    }
+  };
+
+  const removeComm = async (personId: string, commId: string) => {
+    if (!sdk) return;
+    try {
+      const response = await sdk.people.removeComm(personId, commId);
+      if (response.success) {
+        toast.success("Comm unlinked successfully");
+        return true;
+      } else {
+        toast.error(response.error || "Failed to unlink comm");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "An error occurred");
+    }
+    return false;
+  };
+
   useEffect(() => {
     if (sdk) {
       loadPeople();
@@ -96,9 +234,16 @@ export function usePeople() {
     isLoading,
     error,
     loadPeople,
+    getPerson,
     createPerson,
     updatePerson,
     deletePerson,
+    addCompany,
+    createAndLinkCompany,
+    removeCompany,
+    addComm,
+    createAndLinkComm,
+    removeComm,
   };
 }
 
