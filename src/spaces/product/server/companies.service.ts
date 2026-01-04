@@ -1,12 +1,24 @@
 import { eq, and } from "drizzle-orm";
-import { db } from "@/spaces/platform/server/db";
-import { companies, peopleCompanies, comms, commsCompanies, people } from "@db/product/schema";
-import { BaseEntityService, PermissionContext } from "@/spaces/platform/server/base-entity.service";
-import { InferSelectModel, InferInsertModel } from "drizzle-orm";
+import type { db } from "@/spaces/platform/server/db";
+import {
+  companies,
+  peopleCompanies,
+  comms,
+  commsCompanies,
+  people,
+} from "@db/product/schema";
+import {
+  BaseEntityService,
+  type PermissionContext,
+} from "@/spaces/platform/server/base-entity.service";
+import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
+import { normalizeComm, type CommType } from "@db/product/comm-validation";
 
 type Company = InferSelectModel<typeof companies>;
 type NewCompany = InferInsertModel<typeof companies>;
-type CompanyUpdate = Partial<Omit<Company, "id" | "tenantId" | "createdAt" | "updatedAt">>;
+type CompanyUpdate = Partial<
+  Omit<Company, "id" | "tenantId" | "createdAt" | "updatedAt">
+>;
 
 type Person = InferSelectModel<typeof people>;
 type NewPerson = InferInsertModel<typeof people>;
@@ -14,10 +26,7 @@ type Comm = InferSelectModel<typeof comms>;
 type NewComm = InferInsertModel<typeof comms>;
 
 export class CompaniesService extends BaseEntityService {
-  constructor(
-    drizzleClient: typeof db,
-    permissionContext: PermissionContext
-  ) {
+  constructor(drizzleClient: typeof db, permissionContext: PermissionContext) {
     super(drizzleClient, permissionContext);
   }
 
@@ -52,7 +61,9 @@ export class CompaniesService extends BaseEntityService {
       .where(eq(companies.tenantId, this.permissionContext.tenantId));
   }
 
-  async getCompanyById(id: string): Promise<(Company & { people: Person[], comms: Comm[] }) | null> {
+  async getCompanyById(
+    id: string
+  ): Promise<(Company & { people: Person[]; comms: Comm[] }) | null> {
     if (!this.permissionContext.tenantId) {
       throw new Error("Tenant ID is required to fetch a company");
     }
@@ -106,7 +117,9 @@ export class CompaniesService extends BaseEntityService {
     };
   }
 
-  async createCompany(data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">): Promise<Company> {
+  async createCompany(
+    data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">
+  ): Promise<Company> {
     if (!this.permissionContext.tenantId) {
       throw new Error("Tenant ID is required to create a company");
     }
@@ -185,7 +198,8 @@ export class CompaniesService extends BaseEntityService {
     role?: string,
     isPrimary?: boolean
   ): Promise<void> {
-    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+    if (!this.permissionContext.tenantId)
+      throw new Error("Tenant ID is required");
 
     await this.db.insert(peopleCompanies).values({
       tenantId: this.permissionContext.tenantId,
@@ -197,7 +211,8 @@ export class CompaniesService extends BaseEntityService {
   }
 
   async removePersonLink(companyId: string, personId: string): Promise<void> {
-    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+    if (!this.permissionContext.tenantId)
+      throw new Error("Tenant ID is required");
 
     await this.db
       .delete(peopleCompanies)
@@ -216,7 +231,8 @@ export class CompaniesService extends BaseEntityService {
     role?: string,
     isPrimary?: boolean
   ): Promise<Person> {
-    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+    if (!this.permissionContext.tenantId)
+      throw new Error("Tenant ID is required");
 
     const [person] = await this.db
       .insert(people)
@@ -238,7 +254,8 @@ export class CompaniesService extends BaseEntityService {
   ========================= */
 
   async addCommLink(companyId: string, commId: string): Promise<void> {
-    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+    if (!this.permissionContext.tenantId)
+      throw new Error("Tenant ID is required");
 
     await this.db.insert(commsCompanies).values({
       tenantId: this.permissionContext.tenantId,
@@ -248,7 +265,8 @@ export class CompaniesService extends BaseEntityService {
   }
 
   async removeCommLink(companyId: string, commId: string): Promise<void> {
-    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+    if (!this.permissionContext.tenantId)
+      throw new Error("Tenant ID is required");
 
     await this.db
       .delete(commsCompanies)
@@ -263,21 +281,62 @@ export class CompaniesService extends BaseEntityService {
 
   async createAndLinkComm(
     companyId: string,
-    data: Omit<NewComm, "id" | "tenantId" | "createdAt" | "updatedAt">
+    data: Omit<
+      NewComm,
+      "id" | "tenantId" | "createdAt" | "updatedAt" | "canonicalValue"
+    >
   ): Promise<Comm> {
-    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+    if (!this.permissionContext.tenantId)
+      throw new Error("Tenant ID is required");
 
-    const [comm] = await this.db
-      .insert(comms)
-      .values({
-        ...data,
-        tenantId: this.permissionContext.tenantId,
-      })
-      .returning();
+    const { value, canonicalValue } = normalizeComm(
+      data.type as CommType,
+      data.value
+    );
 
-    if (!comm) throw new Error("Failed to create comm");
+    // Try to find existing comm first
+    let [comm] = await this.db
+      .select()
+      .from(comms)
+      .where(
+        and(
+          eq(comms.tenantId, this.permissionContext.tenantId),
+          eq(comms.type, data.type),
+          eq(comms.canonicalValue, canonicalValue)
+        )
+      )
+      .limit(1);
 
-    await this.addCommLink(companyId, comm.id);
+    if (!comm) {
+      [comm] = await this.db
+        .insert(comms)
+        .values({
+          tenantId: this.permissionContext.tenantId,
+          type: data.type,
+          value,
+          canonicalValue,
+        })
+        .returning();
+    }
+
+    if (!comm) throw new Error("Failed to create or find comm");
+
+    // Check if link already exists
+    const [existingLink] = await this.db
+      .select()
+      .from(commsCompanies)
+      .where(
+        and(
+          eq(commsCompanies.tenantId, this.permissionContext.tenantId),
+          eq(commsCompanies.companyId, companyId),
+          eq(commsCompanies.commId, comm.id)
+        )
+      )
+      .limit(1);
+
+    if (!existingLink) {
+      await this.addCommLink(companyId, comm.id);
+    }
 
     return comm;
   }
@@ -295,4 +354,3 @@ export class CompaniesService extends BaseEntityService {
     });
   }
 }
-

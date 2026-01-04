@@ -111,7 +111,6 @@ export const commType = pgEnum("comm_type", [
   "email",
   "phone",
   "linkedin",
-  "calendar",
   "slack",
   "whatsapp",
   "other",
@@ -124,6 +123,7 @@ export const comms = product.table(
     tenantId: uuid("tenant_id").notNull(),
     type: commType("type").notNull(),
     value: jsonb("value").notNull(),
+    canonicalValue: text("canonical_value").notNull(),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -131,6 +131,11 @@ export const comms = product.table(
   },
   (t) => [
     index("comms_tenant_id_idx").on(t.tenantId),
+    uniqueIndex("comms_tenant_type_canonical_value_unique").on(
+      t.tenantId,
+      t.type,
+      t.canonicalValue
+    ),
     foreignKey({
       columns: [t.tenantId],
       foreignColumns: [tenants.id],

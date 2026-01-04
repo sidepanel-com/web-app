@@ -22,6 +22,13 @@
       "when": 1767546530529,
       "tag": "0002_faithful_red_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1767563066198,
+      "tag": "0003_daily_victor_mancha",
+      "breakpoints": true
     }
   ]
 }

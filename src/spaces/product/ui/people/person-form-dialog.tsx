@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui-primitives/ui/tab
 import { Badge } from "@/ui-primitives/ui/badge";
 import { ScrollArea } from "@/ui-primitives/ui/scroll-area";
 import { useCompanies } from "@/spaces/product/hooks/use-companies";
+import { formatCommValue, CommType } from "@db/product/comm-validation";
 
 const personSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -68,6 +69,7 @@ export function PersonFormDialog({
   const [newCompanyName, setNewCompanyName] = useState("");
   const [newCommType, setNewCommType] = useState<string>("email");
   const [newCommValue, setNewCommValue] = useState("");
+  const [newCommExtra, setNewCommExtra] = useState("");
 
   const form = useForm<PersonFormValues>({
     resolver: zodResolver(personSchema),
@@ -108,7 +110,7 @@ export function PersonFormDialog({
     }
   };
 
-  const filteredAllCompanies = allCompanies.filter(c => 
+  const filteredAllCompanies = allCompanies.filter(c =>
     c.name.toLowerCase().includes(companySearch.toLowerCase()) &&
     !person?.companies.some(pc => pc.id === c.id)
   );
@@ -119,7 +121,7 @@ export function PersonFormDialog({
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>{person ? "Edit Person" : "Add New Person"}</DialogTitle>
         </DialogHeader>
-        
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="mx-6 grid grid-cols-3">
             <TabsTrigger value="details">Details</TabsTrigger>
@@ -206,10 +208,10 @@ export function PersonFormDialog({
               <div className="space-y-2 border-t pt-4">
                 <h4 className="text-sm font-medium">Link Existing Company</h4>
                 <div className="space-y-2">
-                  <Input 
-                    placeholder="Search companies..." 
-                    value={companySearch} 
-                    onChange={e => setCompanySearch(e.target.value)} 
+                  <Input
+                    placeholder="Search companies..."
+                    value={companySearch}
+                    onChange={e => setCompanySearch(e.target.value)}
                     className="text-xs h-8"
                   />
                   {companySearch && (
@@ -229,9 +231,9 @@ export function PersonFormDialog({
               <div className="space-y-2 border-t pt-4">
                 <h4 className="text-sm font-medium">Create & Link New Company</h4>
                 <div className="flex gap-2">
-                  <Input 
-                    placeholder="Company name..." 
-                    value={newCompanyName} 
+                  <Input
+                    placeholder="Company name..."
+                    value={newCompanyName}
                     onChange={e => setNewCompanyName(e.target.value)}
                     className="text-xs h-8"
                   />
@@ -256,7 +258,7 @@ export function PersonFormDialog({
                     <div key={c.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-[10px] h-5">{c.type}</Badge>
-                        <span className="text-sm font-medium">{typeof c.value === 'string' ? c.value : JSON.stringify(c.value)}</span>
+                        <span className="text-sm font-medium">{formatCommValue(c.type as CommType, c.value)}</span>
                       </div>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRemoveComm?.(c.id)}>
                         <X className="h-4 w-4" />
@@ -271,33 +273,75 @@ export function PersonFormDialog({
               <div className="space-y-2 border-t pt-4">
                 <h4 className="text-sm font-medium">Add New Communication</h4>
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <select 
-                      className="flex h-8 w-24 rounded-md border border-input bg-transparent px-2 py-1 text-[10px] shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      value={newCommType}
-                      onChange={e => setNewCommType(e.target.value)}
-                    >
-                      <option value="email">Email</option>
-                      <option value="phone">Phone</option>
-                      <option value="linkedin">LinkedIn</option>
-                      <option value="slack">Slack</option>
-                      <option value="whatsapp">WhatsApp</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <Input 
-                      placeholder="Value..." 
-                      value={newCommValue} 
-                      onChange={e => setNewCommValue(e.target.value)}
-                      className="text-xs h-8 flex-1"
-                    />
-                    <Button size="sm" onClick={() => {
-                      if (newCommValue) {
-                        onAddComm?.(newCommType, newCommValue);
-                        setNewCommValue("");
-                      }
-                    }}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <select
+                        className="flex h-8 w-32 rounded-md border border-input bg-transparent px-2 py-1 text-[10px] shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        value={newCommType}
+                        onChange={e => {
+                          setNewCommType(e.target.value);
+                          setNewCommValue("");
+                          setNewCommExtra("");
+                        }}
+                      >
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="slack">Slack</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="other">Other</option>
+                      </select>
+
+                      {newCommType === "slack" && (
+                        <Input
+                          placeholder="Workspace..."
+                          value={newCommExtra}
+                          onChange={e => setNewCommExtra(e.target.value)}
+                          className="text-xs h-8 flex-1"
+                        />
+                      )}
+
+                      {newCommType === "other" && (
+                        <Input
+                          placeholder="Label..."
+                          value={newCommExtra}
+                          onChange={e => setNewCommExtra(e.target.value)}
+                          className="text-xs h-8 flex-1"
+                        />
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder={
+                          newCommType === "email" ? "Email address..." :
+                            newCommType === "phone" ? "Phone number..." :
+                              newCommType === "linkedin" ? "LinkedIn URL..." :
+                                newCommType === "slack" ? "Handle..." :
+                                  newCommType === "whatsapp" ? "WhatsApp number..." :
+                                    "Value..."
+                        }
+                        value={newCommValue}
+                        onChange={e => setNewCommValue(e.target.value)}
+                        className="text-xs h-8 flex-1"
+                      />
+                      <Button size="sm" onClick={() => {
+                        if (newCommValue) {
+                          let value: any;
+                          if (newCommType === "email") value = { address: newCommValue };
+                          else if (newCommType === "phone" || newCommType === "whatsapp") value = { number: newCommValue };
+                          else if (newCommType === "linkedin") value = { url: newCommValue };
+                          else if (newCommType === "slack") value = { handle: newCommValue, workspace: newCommExtra };
+                          else if (newCommType === "other") value = { label: newCommExtra, value: newCommValue };
+
+                          onAddComm?.(newCommType, value);
+                          setNewCommValue("");
+                          setNewCommExtra("");
+                        }
+                      }}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
