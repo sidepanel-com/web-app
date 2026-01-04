@@ -1,4 +1,4 @@
-import { SquareTerminal, Bot, BookOpen, LayoutDashboard, Layout } from "lucide-react";
+import { SquareTerminal, Bot, BookOpen, LayoutDashboard, Smartphone } from "lucide-react";
 import { type NavSection } from "@/spaces/platform/ui/nav-types";
 
 /**
@@ -12,7 +12,7 @@ export const productNavigation: NavSection[] = [
       {
         title: "App",
         url: "/app",
-        icon: Layout,
+        icon: Smartphone,
       },
     ],
   },
