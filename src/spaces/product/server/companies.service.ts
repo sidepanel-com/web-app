@@ -257,11 +257,26 @@ export class CompaniesService extends BaseEntityService {
     if (!this.permissionContext.tenantId)
       throw new Error("Tenant ID is required");
 
-    await this.db.insert(commsCompanies).values({
-      tenantId: this.permissionContext.tenantId,
-      companyId,
-      commId,
-    });
+    // Check if link already exists
+    const [existingLink] = await this.db
+      .select()
+      .from(commsCompanies)
+      .where(
+        and(
+          eq(commsCompanies.tenantId, this.permissionContext.tenantId),
+          eq(commsCompanies.companyId, companyId),
+          eq(commsCompanies.commId, commId)
+        )
+      )
+      .limit(1);
+
+    if (!existingLink) {
+      await this.db.insert(commsCompanies).values({
+        tenantId: this.permissionContext.tenantId,
+        companyId,
+        commId,
+      });
+    }
   }
 
   async removeCommLink(companyId: string, commId: string): Promise<void> {
@@ -289,12 +304,13 @@ export class CompaniesService extends BaseEntityService {
     if (!this.permissionContext.tenantId)
       throw new Error("Tenant ID is required");
 
+    // Normalize input first to ensure consistent comparison
     const { value, canonicalValue } = normalizeComm(
       data.type as CommType,
       data.value
     );
 
-    // Try to find existing comm first
+    // Try to find existing comm first using normalized canonicalValue
     let [comm] = await this.db
       .select()
       .from(comms)

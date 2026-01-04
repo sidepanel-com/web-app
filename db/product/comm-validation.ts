@@ -89,16 +89,27 @@ export function normalizeComm(
 ): { value: any; canonicalValue: string } {
   switch (type) {
     case "email": {
-      const parsed = emailValueSchema.parse(
-        typeof input === "string" ? { address: input } : input
-      );
+      // Trim input string before parsing to ensure consistent comparison
+      const emailInput = typeof input === "string" 
+        ? { address: input.trim() } 
+        : { 
+            ...input, 
+            address: typeof input.address === "string" ? input.address.trim() : input.address 
+          };
+      const parsed = emailValueSchema.parse(emailInput);
       return {
         value: parsed,
         canonicalValue: parsed.address,
       };
     }
     case "phone": {
-      const data = typeof input === "string" ? { number: input } : input;
+      // Trim input before normalizing phone number
+      const data = typeof input === "string" 
+        ? { number: input.trim() } 
+        : { 
+            ...input, 
+            number: typeof input.number === "string" ? input.number.trim() : input.number 
+          };
       const parsed = phoneValueSchema.parse(data);
       const normalized = normalizePhoneNumber(parsed.number);
       const finalValue = { ...parsed, number: normalized };
@@ -108,7 +119,13 @@ export function normalizeComm(
       };
     }
     case "whatsapp": {
-      const data = typeof input === "string" ? { number: input } : input;
+      // Trim input before normalizing phone number
+      const data = typeof input === "string" 
+        ? { number: input.trim() } 
+        : { 
+            ...input, 
+            number: typeof input.number === "string" ? input.number.trim() : input.number 
+          };
       const parsed = whatsappValueSchema.parse(data);
       const normalized = normalizePhoneNumber(parsed.number);
       const finalValue = { ...parsed, number: normalized };
@@ -118,7 +135,14 @@ export function normalizeComm(
       };
     }
     case "linkedin": {
-      const data = typeof input === "string" ? { url: input } : input;
+      // Trim input URL and vanity name
+      const data = typeof input === "string" 
+        ? { url: input.trim() } 
+        : { 
+            ...input, 
+            url: typeof input.url === "string" ? input.url.trim() : input.url,
+            vanityName: typeof input.vanityName === "string" ? input.vanityName.trim() : input.vanityName,
+          };
       const vanityName = extractLinkedInVanityName(data.url || "");
       const parsed = linkedinValueSchema.parse({
         ...data,
@@ -130,14 +154,28 @@ export function normalizeComm(
       };
     }
     case "slack": {
-      const parsed = slackValueSchema.parse(input);
+      // Slack schema already has trim, but ensure we trim input strings
+      const slackInput = typeof input === "object" && input !== null
+        ? {
+            handle: typeof input.handle === "string" ? input.handle.trim() : input.handle,
+            workspace: typeof input.workspace === "string" ? input.workspace.trim() : input.workspace,
+          }
+        : input;
+      const parsed = slackValueSchema.parse(slackInput);
       return {
         value: parsed,
         canonicalValue: `${parsed.workspace}:${parsed.handle}`,
       };
     }
     case "other": {
-      const parsed = otherValueSchema.parse(input);
+      // Trim other value strings
+      const otherInput = typeof input === "object" && input !== null
+        ? {
+            label: typeof input.label === "string" ? input.label.trim() : input.label,
+            value: typeof input.value === "string" ? input.value.trim() : input.value,
+          }
+        : input;
+      const parsed = otherValueSchema.parse(otherInput);
       return {
         value: parsed,
         canonicalValue: parsed.value,
