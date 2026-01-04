@@ -1,12 +1,17 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "@/spaces/platform/server/db";
-import { companies } from "@db/product/schema";
+import { companies, peopleCompanies, comms, commsCompanies, people } from "@db/product/schema";
 import { BaseEntityService, PermissionContext } from "@/spaces/platform/server/base-entity.service";
 import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
 type Company = InferSelectModel<typeof companies>;
 type NewCompany = InferInsertModel<typeof companies>;
 type CompanyUpdate = Partial<Omit<Company, "id" | "tenantId" | "createdAt" | "updatedAt">>;
+
+type Person = InferSelectModel<typeof people>;
+type NewPerson = InferInsertModel<typeof people>;
+type Comm = InferSelectModel<typeof comms>;
+type NewComm = InferInsertModel<typeof comms>;
 
 export class CompaniesService extends BaseEntityService {
   constructor(
@@ -47,7 +52,7 @@ export class CompaniesService extends BaseEntityService {
       .where(eq(companies.tenantId, this.permissionContext.tenantId));
   }
 
-  async getCompanyById(id: string): Promise<Company | null> {
+  async getCompanyById(id: string): Promise<(Company & { people: Person[], comms: Comm[] }) | null> {
     if (!this.permissionContext.tenantId) {
       throw new Error("Tenant ID is required to fetch a company");
     }
@@ -66,7 +71,39 @@ export class CompaniesService extends BaseEntityService {
         )
       );
 
-    return company || null;
+    if (!company) return null;
+
+    const companyPeopleList = await this.db
+      .select({
+        person: people,
+      })
+      .from(peopleCompanies)
+      .innerJoin(people, eq(peopleCompanies.personId, people.id))
+      .where(
+        and(
+          eq(peopleCompanies.tenantId, this.permissionContext.tenantId),
+          eq(peopleCompanies.companyId, id)
+        )
+      );
+
+    const companyCommsList = await this.db
+      .select({
+        comm: comms,
+      })
+      .from(commsCompanies)
+      .innerJoin(comms, eq(commsCompanies.commId, comms.id))
+      .where(
+        and(
+          eq(commsCompanies.tenantId, this.permissionContext.tenantId),
+          eq(commsCompanies.companyId, id)
+        )
+      );
+
+    return {
+      ...company,
+      people: companyPeopleList.map((cp) => cp.person),
+      comms: companyCommsList.map((cc) => cc.comm),
+    };
   }
 
   async createCompany(data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">): Promise<Company> {
@@ -136,6 +173,113 @@ export class CompaniesService extends BaseEntityService {
           eq(companies.tenantId, this.permissionContext.tenantId)
         )
       );
+  }
+
+  /* =========================
+     ASSOCIATIONS (PEOPLE)
+  ========================= */
+
+  async addPersonLink(
+    companyId: string,
+    personId: string,
+    role?: string,
+    isPrimary?: boolean
+  ): Promise<void> {
+    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+
+    await this.db.insert(peopleCompanies).values({
+      tenantId: this.permissionContext.tenantId,
+      companyId,
+      personId,
+      role,
+      isPrimary: isPrimary ?? false,
+    });
+  }
+
+  async removePersonLink(companyId: string, personId: string): Promise<void> {
+    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+
+    await this.db
+      .delete(peopleCompanies)
+      .where(
+        and(
+          eq(peopleCompanies.tenantId, this.permissionContext.tenantId),
+          eq(peopleCompanies.companyId, companyId),
+          eq(peopleCompanies.personId, personId)
+        )
+      );
+  }
+
+  async createAndLinkPerson(
+    companyId: string,
+    data: Omit<NewPerson, "id" | "tenantId" | "createdAt" | "updatedAt">,
+    role?: string,
+    isPrimary?: boolean
+  ): Promise<Person> {
+    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+
+    const [person] = await this.db
+      .insert(people)
+      .values({
+        ...data,
+        tenantId: this.permissionContext.tenantId,
+      })
+      .returning();
+
+    if (!person) throw new Error("Failed to create person");
+
+    await this.addPersonLink(companyId, person.id, role, isPrimary);
+
+    return person;
+  }
+
+  /* =========================
+     ASSOCIATIONS (COMMS)
+  ========================= */
+
+  async addCommLink(companyId: string, commId: string): Promise<void> {
+    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+
+    await this.db.insert(commsCompanies).values({
+      tenantId: this.permissionContext.tenantId,
+      companyId,
+      commId,
+    });
+  }
+
+  async removeCommLink(companyId: string, commId: string): Promise<void> {
+    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+
+    await this.db
+      .delete(commsCompanies)
+      .where(
+        and(
+          eq(commsCompanies.tenantId, this.permissionContext.tenantId),
+          eq(commsCompanies.companyId, companyId),
+          eq(commsCompanies.commId, commId)
+        )
+      );
+  }
+
+  async createAndLinkComm(
+    companyId: string,
+    data: Omit<NewComm, "id" | "tenantId" | "createdAt" | "updatedAt">
+  ): Promise<Comm> {
+    if (!this.permissionContext.tenantId) throw new Error("Tenant ID is required");
+
+    const [comm] = await this.db
+      .insert(comms)
+      .values({
+        ...data,
+        tenantId: this.permissionContext.tenantId,
+      })
+      .returning();
+
+    if (!comm) throw new Error("Failed to create comm");
+
+    await this.addCommLink(companyId, comm.id);
+
+    return comm;
   }
 
   static create(

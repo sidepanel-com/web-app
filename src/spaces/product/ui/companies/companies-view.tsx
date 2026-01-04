@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { CompaniesList } from "./companies-list";
 import { CompanyFormDialog } from "./company-form-dialog";
 import { useCompanies } from "@/spaces/product/hooks/use-companies";
-import { Company } from "@db/product/types";
+import { Company, Person, Comm } from "@db/product/types";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -13,23 +13,33 @@ export function CompaniesView() {
     companies,
     isLoading,
     error,
+    getCompany,
     createCompany,
     updateCompany,
     deleteCompany,
+    addPerson,
+    createAndLinkPerson,
+    removePerson,
+    addComm,
+    createAndLinkComm,
+    removeComm,
   } = useCompanies();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<(Company & { people: Person[], comms: Comm[] }) | null>(null);
 
   const handleCreateClick = () => {
     setSelectedCompany(null);
     setIsDialogOpen(true);
   };
 
-  const handleEditClick = (company: Company) => {
-    setSelectedCompany(company);
-    setIsDialogOpen(true);
+  const handleEditClick = async (company: Company) => {
+    const fullCompany = await getCompany(company.id);
+    if (fullCompany) {
+      setSelectedCompany(fullCompany);
+      setIsDialogOpen(true);
+    }
   };
 
   const handleSubmit = async (values: any) => {
@@ -37,6 +47,48 @@ export function CompaniesView() {
       await updateCompany(selectedCompany.id, values);
     } else {
       await createCompany(values);
+    }
+  };
+
+  const refreshCompany = async () => {
+    if (selectedCompany) {
+      const updated = await getCompany(selectedCompany.id);
+      if (updated) setSelectedCompany(updated);
+    }
+  };
+
+  const handleAddPerson = async (personId: string) => {
+    if (selectedCompany) {
+      const success = await addPerson(selectedCompany.id, personId);
+      if (success) await refreshCompany();
+    }
+  };
+
+  const handleCreatePerson = async (firstName: string, lastName: string) => {
+    if (selectedCompany) {
+      const person = await createAndLinkPerson(selectedCompany.id, { firstName, lastName });
+      if (person) await refreshCompany();
+    }
+  };
+
+  const handleRemovePerson = async (personId: string) => {
+    if (selectedCompany) {
+      const success = await removePerson(selectedCompany.id, personId);
+      if (success) await refreshCompany();
+    }
+  };
+
+  const handleAddComm = async (type: string, value: any) => {
+    if (selectedCompany) {
+      const comm = await createAndLinkComm(selectedCompany.id, { type: type as any, value });
+      if (comm) await refreshCompany();
+    }
+  };
+
+  const handleRemoveComm = async (commId: string) => {
+    if (selectedCompany) {
+      const success = await removeComm(selectedCompany.id, commId);
+      if (success) await refreshCompany();
     }
   };
 
@@ -70,6 +122,11 @@ export function CompaniesView() {
         company={selectedCompany}
         onSubmit={handleSubmit}
         onDelete={deleteCompany}
+        onAddPerson={handleAddPerson}
+        onCreatePerson={handleCreatePerson}
+        onRemovePerson={handleRemovePerson}
+        onAddComm={handleAddComm}
+        onRemoveComm={handleRemoveComm}
       />
     </div>
   );
