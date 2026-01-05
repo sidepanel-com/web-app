@@ -45,4 +45,3 @@ export default async function handler(
 ) {
   return new V1ApiService(handlers, schemas).run(req, res);
 }
-
