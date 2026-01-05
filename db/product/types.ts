@@ -13,6 +13,8 @@ import type {
   callComms,
   messages,
   messageComms,
+  companyDomains,
+  companyWebsites,
 } from "./schema";
 
 export type Person = typeof people.$inferSelect;
@@ -20,6 +22,17 @@ export type NewPerson = typeof people.$inferInsert;
 
 export type Company = typeof companies.$inferSelect;
 export type NewCompany = typeof companies.$inferInsert;
+
+export type CompanyDomain = typeof companyDomains.$inferSelect;
+export type NewCompanyDomain = typeof companyDomains.$inferInsert;
+
+export type CompanyWebsite = typeof companyWebsites.$inferSelect;
+export type NewCompanyWebsite = typeof companyWebsites.$inferInsert;
+
+export type CompanyWithWeb = Company & {
+  domains: CompanyDomain[];
+  websites: CompanyWebsite[];
+};
 
 export type PersonCompany = typeof peopleCompanies.$inferSelect;
 export type NewPersonCompany = typeof peopleCompanies.$inferInsert;

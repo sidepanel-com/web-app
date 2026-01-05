@@ -55,7 +55,6 @@ export const companies = product.table(
     id: uuid("id").defaultRandom().primaryKey(),
     tenantId: uuid("tenant_id").notNull(),
     name: text("name").notNull(),
-    domain: text("domain"),
     logoUrl: text("logo_url"),
     description: text("description"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
@@ -72,6 +71,59 @@ export const companies = product.table(
       columns: [t.tenantId],
       foreignColumns: [tenants.id],
       name: "companies_tenant_id_fkey",
+    }).onDelete("cascade"),
+  ]
+);
+
+export const companyDomains = product.table(
+  "company_domains",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull(),
+    companyId: uuid("company_id").notNull(),
+    domain: text("domain").notNull(),
+    isPrimary: boolean("is_primary").default(false),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.tenantId],
+      foreignColumns: [tenants.id],
+      name: "company_domains_tenant_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.companyId],
+      foreignColumns: [companies.id],
+      name: "company_domains_company_id_fkey",
+    }).onDelete("cascade"),
+  ]
+);
+
+export const companyWebsites = product.table(
+  "company_websites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull(),
+    companyId: uuid("company_id").notNull(),
+    url: text("url").notNull(),
+    type: text("type"),
+    isPrimary: boolean("is_primary").default(false),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.tenantId],
+      foreignColumns: [tenants.id],
+      name: "company_websites_tenant_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.companyId],
+      foreignColumns: [companies.id],
+      name: "company_websites_company_id_fkey",
     }).onDelete("cascade"),
   ]
 );

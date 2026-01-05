@@ -14,6 +14,8 @@ import {
   callComms,
   messages,
   messageComms,
+  companyDomains,
+  companyWebsites,
 } from "./schema";
 import { tenants } from "../platform/schema";
 
@@ -33,6 +35,8 @@ export const companiesRelations = relations(companies, ({ one, many }) => ({
   }),
   people: many(peopleCompanies),
   comms: many(commsCompanies),
+  domains: many(companyDomains),
+  websites: many(companyWebsites),
 }));
 
 export const peopleCompaniesRelations = relations(
@@ -48,6 +52,31 @@ export const peopleCompaniesRelations = relations(
     }),
     company: one(companies, {
       fields: [peopleCompanies.companyId],
+      references: [companies.id],
+    }),
+  })
+);
+
+export const companyDomainsRelations = relations(companyDomains, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [companyDomains.tenantId],
+    references: [tenants.id],
+  }),
+  company: one(companies, {
+    fields: [companyDomains.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const companyWebsitesRelations = relations(
+  companyWebsites,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [companyWebsites.tenantId],
+      references: [tenants.id],
+    }),
+    company: one(companies, {
+      fields: [companyWebsites.companyId],
       references: [companies.id],
     }),
   })
