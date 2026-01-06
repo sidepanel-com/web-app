@@ -4,9 +4,9 @@ import { ApiClient, ApiResponse } from "./index";
 type InvitationStatus = Tables<"tenant_invitations">["status"];
 
 export interface InvitationWithDetails extends Tables<"tenant_invitations"> {
-  invited_by_user?: {
-    first_name: string | null;
-    last_name: string | null;
+  invitedByUser?: {
+    firstName: string | null;
+    lastName: string | null;
   };
   tenant?: {
     name: string;

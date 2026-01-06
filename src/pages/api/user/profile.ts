@@ -11,14 +11,15 @@ const schemas = {
     phone: z.string().optional(),
     timezone: z.string().optional(),
     avatar_url: z.string().url().optional(),
-    preferences: z.record(z.any()).optional(),
+    preferences: z.record(z.string(), z.any()).optional(),
   }),
 };
 
 const handlers: UserApiHandlers<typeof schemas> = {
   // Get user profile
-  GET: async ({ dangerSupabaseAdmin, apiUser }) => {
+  GET: async ({ db, dangerSupabaseAdmin, apiUser }) => {
     const userProfileService = UserProfileService.create(
+      db,
       dangerSupabaseAdmin,
       apiUser.id
     );
@@ -29,8 +30,9 @@ const handlers: UserApiHandlers<typeof schemas> = {
   },
 
   // Update user profile
-  PATCH: async ({ dangerSupabaseAdmin, requestData, apiUser }) => {
+  PATCH: async ({ db, dangerSupabaseAdmin, requestData, apiUser }) => {
     const userProfileService = UserProfileService.create(
+      db,
       dangerSupabaseAdmin,
       apiUser.id
     );

@@ -1,6 +1,6 @@
 import { GetServerSideProps } from "next";
 import { InvitationsList } from "@/spaces/platform/ui/tenant/invitations/invitations-list";
-import { Button } from "@/spaces/platform/ui/ui/button";
+import { Button } from "@/ui-primitives/ui/button";
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
 

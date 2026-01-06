@@ -15,6 +15,34 @@
       "when": 1767481221504,
       "tag": "0001_wonderful_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1767546530529,
+      "tag": "0002_faithful_red_shift",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1767563066198,
+      "tag": "0003_daily_victor_mancha",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1767612757066,
+      "tag": "0004_chemical_satana",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1767612856402,
+      "tag": "0005_mushy_wasp",
+      "breakpoints": true
     }
   ]
 }

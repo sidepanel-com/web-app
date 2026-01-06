@@ -13,6 +13,7 @@ import { createBrowserClient } from "@/spaces/identity/supabase.browser-client";
 import { useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/ui-primitives/ui/alert";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import BlockTerms from "@/spaces/identity/ui/block-terms";
@@ -24,6 +25,7 @@ export default function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const router = useRouter();
   const supabase = createBrowserClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,6 +37,9 @@ export default function SignupForm({
     setIsLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
     if (error) {
       setError(error);
@@ -58,9 +63,10 @@ export default function SignupForm({
     setIsLoading(false);
     if (error) {
       setError(error);
+      return;
     }
-    if (data) {
-      console.log(data);
+    if (data.user) {
+      router.push("/");
     }
   }
 

@@ -6,6 +6,8 @@ import {
 } from "@/spaces/platform/server/next-api-service";
 import { TenantUserService } from "@/spaces/platform/server/tenant-user.service";
 import { TenantService } from "@/spaces/platform/server/tenant.service";
+import { Tables } from "@/types/database.types";
+type TenantUser = Tables<"tenant_users">;
 
 const schemas = {
   GET: z.object({
@@ -15,7 +17,7 @@ const schemas = {
     userId: z.string(),
     role: z.enum(["owner", "admin", "member", "viewer"]).optional(),
     status: z.enum(["active", "inactive", "pending"]).optional(),
-    permissions: z.record(z.any()).optional(),
+    permissions: z.record(z.string(), z.any()).optional(),
   }),
   DELETE: z.object({
     userId: z.string(),
@@ -26,11 +28,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
   // Get specific user details
   GET: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
-    const tempTenantService = TenantService.create(
-      db,
-      apiUser.id,
-      tenantId
-    );
+    const tempTenantService = TenantService.create(db, apiUser.id, tenantId);
     const userRole = await tempTenantService.getUserRoleInTenant(tenantId);
 
     // Create tenant user service with full context
@@ -53,11 +51,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
   // Update user role, status, or permissions
   PATCH: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
-    const tempTenantService = TenantService.create(
-      db,
-      apiUser.id,
-      tenantId
-    );
+    const tempTenantService = TenantService.create(db, apiUser.id, tenantId);
     const userRole = await tempTenantService.getUserRoleInTenant(tenantId);
 
     // Create tenant user service with full context
@@ -68,7 +62,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
       userRole || "viewer"
     );
 
-    let updatedUser;
+    let updatedUser: TenantUser | null = null;
 
     // Update role if provided
     if (requestData.role) {
@@ -108,11 +102,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
   // Remove user from tenant
   DELETE: async ({ db, requestData, apiUser, tenantId }) => {
     // Get user's role in this tenant first
-    const tempTenantService = TenantService.create(
-      db,
-      apiUser.id,
-      tenantId
-    );
+    const tempTenantService = TenantService.create(db, apiUser.id, tenantId);
     const userRole = await tempTenantService.getUserRoleInTenant(tenantId);
 
     // Create tenant user service with full context

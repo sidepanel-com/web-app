@@ -1,3 +1,6 @@
+import ResetPasswordForm from "@/spaces/identity/ui/form-reset-password";
+import { Logo } from "@/spaces/branding/ui/logo";
+
 export default function ProfilePage() {
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">

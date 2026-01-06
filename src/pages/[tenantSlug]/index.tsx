@@ -1,14 +1,27 @@
-import { GetServerSideProps } from "next";
+import type { GetServerSideProps } from "next";
+import { useRouter } from "next/router";
 import { createClient } from "@/spaces/identity/supabase.server-props";
 import { AppPage } from "@/spaces/platform/ui/layout/app-page";
+import { MobileDevice } from "@/spaces/product/ui/mobile-device";
 
-export default function DashboardPage() {
+export default function AppDashboardPage() {
+  const router = useRouter();
+  const tenantSlug = router.query.tenantSlug as string;
+
   return (
-    <>
-      <AppPage>Welcome</AppPage>
-    </>
+    <AppPage>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+        <MobileDevice>
+          <iframe src={`${process.env.NEXT_PUBLIC_SITE_URL}/${tenantSlug}/wrapped`}
+            title="Wrapped App" className="w-full h-full" />
+        </MobileDevice>
+      </div>
+    </AppPage>
   );
 }
+
+// Mark this page as requiring a tenant
+AppDashboardPage.requiresTenant = true;
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const supabase = createClient(ctx);
@@ -16,7 +29,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // If user is not logged in, redirect to login
   if (!session) {
     return {
       redirect: {
@@ -30,3 +42,4 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     props: {},
   };
 };
+

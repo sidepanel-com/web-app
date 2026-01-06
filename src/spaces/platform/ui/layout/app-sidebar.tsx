@@ -20,7 +20,7 @@ const data = {
   tenants: [
     {
       title: "Connections",
-      url: "#",
+      url: "/connections",
       icon: Plug2,
     },
     {

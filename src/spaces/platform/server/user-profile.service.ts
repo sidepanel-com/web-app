@@ -5,25 +5,24 @@ import { BaseEntityService, PermissionContext } from "./base-entity.service";
 type UserProfile = Tables<"user_profiles">;
 
 export interface UserProfileUpdate {
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
+  displayName?: string;
   timezone?: string;
-  avatar_url?: string;
-  preferences?: Record<string, any>;
 }
 
 export interface UserProfileWithAuth extends UserProfile {
-  email?: string;
   email_confirmed_at?: string;
 }
 
 export class UserProfileService extends BaseEntityService {
+  private dangerSupabaseAdmin: SupabaseClient;
+
   constructor(
+    db: any,
     dangerSupabaseAdmin: SupabaseClient,
     permissionContext: PermissionContext
   ) {
-    super(dangerSupabaseAdmin, permissionContext);
+    super(db, permissionContext);
+    this.dangerSupabaseAdmin = dangerSupabaseAdmin;
   }
 
   // Permission checks
@@ -31,7 +30,7 @@ export class UserProfileService extends BaseEntityService {
     // Users can always read their own profile
     if (entityId) {
       const profile = await this.findById(entityId);
-      if (profile?.user_id === this.permissionContext.userId) {
+      if (profile?.userId === this.permissionContext.userId) {
         return true;
       }
     }
@@ -48,7 +47,7 @@ export class UserProfileService extends BaseEntityService {
   async canUpdate(entityId: string): Promise<boolean> {
     // Users can update their own profile
     const profile = await this.findById(entityId);
-    if (profile?.user_id === this.permissionContext.userId) {
+    if (profile?.userId === this.permissionContext.userId) {
       return true;
     }
 
@@ -103,7 +102,7 @@ export class UserProfileService extends BaseEntityService {
 
     return {
       ...profile,
-      email: authUser.user?.email,
+      email: authUser.user?.email || profile.email,
       email_confirmed_at: authUser.user?.email_confirmed_at,
     };
   }
@@ -141,13 +140,10 @@ export class UserProfileService extends BaseEntityService {
     }
 
     const profileInsert: TablesInsert<"user_profiles"> = {
-      user_id: targetUserId,
-      first_name: profileData.first_name || null,
-      last_name: profileData.last_name || null,
-      phone: profileData.phone || null,
-      timezone: profileData.timezone || null,
-      avatar_url: profileData.avatar_url || null,
-      preferences: profileData.preferences || null,
+      userId: targetUserId,
+      email: (await this.dangerSupabaseAdmin.auth.admin.getUserById(targetUserId)).data.user?.email || "",
+      displayName: profileData.displayName || null,
+      timezone: profileData.timezone || "UTC",
     };
 
     const { data, error } = await this.dangerSupabaseAdmin
@@ -173,7 +169,7 @@ export class UserProfileService extends BaseEntityService {
 
     const profileUpdate: TablesUpdate<"user_profiles"> = {
       ...profileData,
-      updated_at: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const { data, error } = await this.dangerSupabaseAdmin
@@ -189,42 +185,21 @@ export class UserProfileService extends BaseEntityService {
 
   /**
    * Update user preferences
+   * @deprecated preferences column missing in schema
    */
   async updatePreferences(
     preferences: Record<string, any>,
     userId?: string
   ): Promise<UserProfile> {
-    const targetUserId = userId || this.permissionContext.userId;
-    const profile = await this.getProfileByUserId(targetUserId);
-
-    if (!profile) {
-      // Create profile if it doesn't exist
-      return await this.createProfile({ preferences }, targetUserId);
-    }
-
-    // Merge with existing preferences
-    const mergedPreferences = {
-      ...((profile.preferences as Record<string, any>) || {}),
-      ...preferences,
-    };
-
-    return await this.updateProfile(profile.id, {
-      preferences: mergedPreferences,
-    });
+    throw new Error("Preferences not supported in current schema");
   }
 
   /**
    * Update avatar URL
+   * @deprecated avatar_url column missing in schema
    */
   async updateAvatar(avatarUrl: string, userId?: string): Promise<UserProfile> {
-    const targetUserId = userId || this.permissionContext.userId;
-    const profile = await this.getProfileByUserId(targetUserId);
-
-    if (!profile) {
-      return await this.createProfile({ avatar_url: avatarUrl }, targetUserId);
-    }
-
-    return await this.updateProfile(profile.id, { avatar_url: avatarUrl });
+    throw new Error("Avatar not supported in current schema");
   }
 
   /**
@@ -241,12 +216,8 @@ export class UserProfileService extends BaseEntityService {
       return authUser.user?.email?.split("@")[0] || "Unknown User";
     }
 
-    if (profile.first_name && profile.last_name) {
-      return `${profile.first_name} ${profile.last_name}`;
-    }
-
-    if (profile.first_name) {
-      return profile.first_name;
+    if (profile.displayName) {
+      return profile.displayName;
     }
 
     // Fallback to email
@@ -310,7 +281,7 @@ export class UserProfileService extends BaseEntityService {
       (profiles || []).map(async (profile) => {
         const { data: authUser } =
           await this.dangerSupabaseAdmin.auth.admin.getUserById(
-            profile.user_id
+            profile.userId
           );
         return {
           ...profile,
@@ -325,10 +296,11 @@ export class UserProfileService extends BaseEntityService {
 
   // Static factory method
   static create(
+    db: any,
     dangerSupabaseAdmin: SupabaseClient,
     userId: string
   ): UserProfileService {
-    return new UserProfileService(dangerSupabaseAdmin, {
+    return new UserProfileService(db, dangerSupabaseAdmin, {
       userId,
     });
   }
