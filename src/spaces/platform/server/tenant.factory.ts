@@ -2,6 +2,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { TenantService } from "./tenant.service";
 import { PermissionContext } from "./base-entity.service";
 import { Tables } from "@/types/database.types";
+import { db } from "./db";
 
 type UserRole = Tables<"tenant_users">["role"];
 
@@ -15,5 +16,5 @@ export function createTenantService(
     tenantId,
     userRole,
   };
-  return new TenantService();
+  return new TenantService(db, permissionContext);
 }

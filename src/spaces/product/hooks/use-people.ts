@@ -213,7 +213,10 @@ export function usePeople() {
 
   const createAndLinkComm = async (
     personId: string,
-    data: Omit<NewComm, "id" | "tenantId" | "createdAt" | "updatedAt">
+    data: Omit<
+      NewComm,
+      "id" | "tenantId" | "createdAt" | "updatedAt" | "canonicalValue"
+    >
   ) => {
     if (!sdk) return;
     try {

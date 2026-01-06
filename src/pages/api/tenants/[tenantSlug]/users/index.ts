@@ -48,9 +48,9 @@ const handlers: TenantApiHandlers<typeof schemas> = {
       role: inv.role,
       status: "pending",
       joined_at: inv.createdAt,
-      invited_by: inv.invited_by_user
-        ? `${inv.invited_by_user.first_name || ""} ${
-            inv.invited_by_user.last_name || ""
+      invited_by: inv.invitedByUser
+        ? `${inv.invitedByUser.firstName || ""} ${
+            inv.invitedByUser.lastName || ""
           }`.trim() || null
         : null,
       invited_by_email: null,

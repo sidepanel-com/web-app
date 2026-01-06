@@ -11,7 +11,6 @@ export interface UserProfileUpdate {
 }
 
 export interface UserProfileWithAuth extends Tables<"user_profiles"> {
-  email?: string;
   email_confirmed_at?: string;
 }
 

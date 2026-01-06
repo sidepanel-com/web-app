@@ -21,9 +21,9 @@ export interface InvitationData {
 }
 
 export interface InvitationWithDetails extends TenantInvitation {
-  invited_by_user?: {
-    first_name: string | null;
-    last_name: string | null;
+  invitedByUser?: {
+    firstName: string | null;
+    lastName: string | null;
   };
   tenant?: {
     name: string;
@@ -146,7 +146,7 @@ export class TenantUserInvitationService extends BaseEntityService {
           redirectTo,
           data: {
             invitationId: invitation.id,
-            tenantId: this.permissionContext.tenantId,
+            tenantId: this.permissionContext.tenantId!,
           },
         }
       );
@@ -172,7 +172,7 @@ export class TenantUserInvitationService extends BaseEntityService {
               redirectTo,
               data: {
                 invitationId: invitation.id,
-                tenantId: this.permissionContext.tenantId,
+                tenantId: this.permissionContext.tenantId!,
               },
             }
           );
@@ -213,10 +213,10 @@ export class TenantUserInvitationService extends BaseEntityService {
 
     return results.map(({ invitation, inviterProfile, tenant }) => ({
       ...invitation,
-      invited_by_user: inviterProfile
+      invitedByUser: inviterProfile
         ? {
-            first_name: inviterProfile.displayName?.split(" ")[0] || null,
-            last_name:
+            firstName: inviterProfile.displayName?.split(" ")[0] || null,
+            lastName:
               inviterProfile.displayName?.split(" ").slice(1).join(" ") || null,
           }
         : undefined,
@@ -266,10 +266,10 @@ export class TenantUserInvitationService extends BaseEntityService {
 
     return {
       ...invitation,
-      invited_by_user: inviterProfile
+      invitedByUser: inviterProfile
         ? {
-            first_name: inviterProfile.displayName?.split(" ")[0] || null,
-            last_name:
+            firstName: inviterProfile.displayName?.split(" ")[0] || null,
+            lastName:
               inviterProfile.displayName?.split(" ").slice(1).join(" ") || null,
           }
         : undefined,
@@ -395,7 +395,7 @@ export class TenantUserInvitationService extends BaseEntityService {
         redirectTo,
         data: {
           invitationId: updatedInvitation.id,
-          tenantId: this.permissionContext.tenantId,
+          tenantId: this.permissionContext.tenantId!,
         },
       });
 
@@ -420,7 +420,7 @@ export class TenantUserInvitationService extends BaseEntityService {
               redirectTo,
               data: {
                 invitationId: updatedInvitation.id,
-                tenantId: this.permissionContext.tenantId,
+                tenantId: this.permissionContext.tenantId!,
               },
             }
           );

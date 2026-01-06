@@ -9,11 +9,11 @@ export interface InvitationDetails {
     name: string;
     slug: string;
   };
-  invited_by_user?: {
-    first_name: string | null;
-    last_name: string | null;
+  invitedByUser?: {
+    firstName: string | null;
+    lastName: string | null;
   };
-  expires_at: string | null;
+  expiresAt: string | null;
 }
 
 export class InvitationsClientAPI {

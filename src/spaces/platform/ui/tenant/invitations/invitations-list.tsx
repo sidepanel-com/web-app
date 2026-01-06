@@ -36,7 +36,7 @@ import {
 import { Badge } from "@/ui-primitives/ui/badge";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { useClientTenantSDK } from "@/lib/contexts/client-tenant-sdk.context";
+import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
 import { InvitationWithDetails } from "@/spaces/platform/client-sdk/tenant-invitations.client-api";
 import { toast } from "sonner";
 
@@ -62,15 +62,31 @@ export function InvitationsList() {
   const {
     tenantSdk,
     tenant,
-    listInvitations,
-    resendInvitation,
-    cancelInvitation,
-  } = useClientTenantSDK();
+  } = usePlatformTenant();
+
+  const listInvitations = useCallback(async () => {
+    if (!tenantSdk) return;
+    return await tenantSdk.tenantInvitations.listInvitations();
+  }, [tenantSdk]);
+
+  const resendInvitation = useCallback(async (id: string) => {
+    if (!tenantSdk) return;
+    return await tenantSdk.tenantInvitations.resendInvitation(id);
+  }, [tenantSdk]);
+
+  const cancelInvitation = useCallback(async (id: string) => {
+    if (!tenantSdk) return;
+    return await tenantSdk.tenantInvitations.cancelInvitation(id);
+  }, [tenantSdk]);
 
   const loadInvitations = useCallback(() => {
-    if (tenant?.id) {
+    if (tenant?.id && listInvitations) {
       listInvitations().then((result) => {
         setInvitations(result?.data?.invitations || []);
+        setLoading(false);
+      }).catch(err => {
+        setError(err instanceof Error ? err.message : "Failed to load invitations");
+        setLoading(false);
       });
     }
   }, [listInvitations, tenant?.id]);
@@ -196,21 +212,21 @@ export function InvitationsList() {
                 <TableCell>
                   <Badge
                     variant="secondary"
-                    className={statusColors[invitation.status]}
+                    className={invitation.status ? statusColors[invitation.status] : ""}
                   >
                     {invitation.status}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
-                    {invitation.invited_by_user?.first_name ||
-                      invitation.invited_by_user?.last_name}
+                    {invitation.invitedByUser?.firstName ||
+                      invitation.invitedByUser?.lastName}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="text-sm text-muted-foreground">
                     {format(
-                      new Date(invitation.created_at || ""),
+                      new Date(invitation.createdAt || ""),
                       "MMM d, yyyy",
                     )}
                   </div>
@@ -219,7 +235,7 @@ export function InvitationsList() {
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <ClockIcon className="h-3 w-3" />
                     {format(
-                      new Date(invitation.expires_at || ""),
+                      new Date(invitation.expiresAt || ""),
                       "MMM d, yyyy",
                     )}
                   </div>

@@ -36,8 +36,8 @@ const handlers: UserApiHandlers<typeof schemas> = {
         email: invitation.email,
         role: invitation.role,
         tenant: invitation.tenant,
-        invited_by_user: invitation.invited_by_user,
-        expires_at: invitation.expires_at,
+        invitedByUser: invitation.invitedByUser,
+        expiresAt: invitation.expiresAt,
       },
     };
   },

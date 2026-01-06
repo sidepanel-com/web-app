@@ -52,55 +52,56 @@ const websiteEntrySchema = companyWebsiteInputSchema.extend({
   isPrimary: z.boolean().optional().default(false),
 });
 
-const companySchema = z
+const companyBaseSchema = z
   .object({
     name: z.string().min(1, "Company name is required"),
     description: z.string().optional(),
     logoUrl: z.string().optional(),
     domains: z.array(domainEntrySchema).default([]),
     websites: z.array(websiteEntrySchema).default([]),
-  })
-  .superRefine((data, ctx) => {
-    const domainSet = new Set<string>();
-    data.domains.forEach((d, idx) => {
-      if (domainSet.has(d.domain)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Duplicate domain",
-          path: ["domains", idx, "domain"],
-        });
-      }
-      domainSet.add(d.domain);
-    });
-    if (data.domains.filter((d) => d.isPrimary).length > 1) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Only one primary domain is allowed",
-        path: ["domains"],
-      });
-    }
-
-    const websiteSet = new Set<string>();
-    data.websites.forEach((w, idx) => {
-      if (websiteSet.has(w.url)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Duplicate website",
-          path: ["websites", idx, "url"],
-        });
-      }
-      websiteSet.add(w.url);
-    });
-    if (data.websites.filter((w) => w.isPrimary).length > 1) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Only one primary website is allowed",
-        path: ["websites"],
-      });
-    }
   });
 
-type CompanyFormValues = z.infer<typeof companySchema>;
+const companySchema = companyBaseSchema.superRefine((data, ctx) => {
+  const domainSet = new Set<string>();
+  data.domains.forEach((d, idx) => {
+    if (domainSet.has(d.domain)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Duplicate domain",
+        path: ["domains", idx, "domain"],
+      });
+    }
+    domainSet.add(d.domain);
+  });
+  if (data.domains.filter((d) => d.isPrimary).length > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Only one primary domain is allowed",
+      path: ["domains"],
+    });
+  }
+
+  const websiteSet = new Set<string>();
+  data.websites.forEach((w, idx) => {
+    if (websiteSet.has(w.url)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Duplicate website",
+        path: ["websites", idx, "url"],
+      });
+    }
+    websiteSet.add(w.url);
+  });
+  if (data.websites.filter((w) => w.isPrimary).length > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Only one primary website is allowed",
+      path: ["websites"],
+    });
+  }
+});
+
+type CompanyFormValues = z.infer<typeof companyBaseSchema>;
 
 interface CompanyFormDialogProps {
   open: boolean;
@@ -141,7 +142,7 @@ export function CompanyFormDialog({
   const [newWebsiteType, setNewWebsiteType] = useState("");
 
   const form = useForm<CompanyFormValues>({
-    resolver: zodResolver(companySchema),
+    resolver: zodResolver(companySchema) as any,
     defaultValues: {
       name: "",
       description: "",

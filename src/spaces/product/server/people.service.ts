@@ -116,7 +116,7 @@ export class PeopleService extends BaseEntityService {
 
   async canRead(personId?: string): Promise<boolean> {
     // For now, if you are in the tenant, you can read people
-    return !!this.permissionContext.tenantId;
+    return !!this.permissionContext.tenantId!;
   }
 
   async canCreate(): Promise<boolean> {
@@ -132,7 +132,7 @@ export class PeopleService extends BaseEntityService {
   }
 
   async getPeople(): Promise<Person[]> {
-    if (!this.permissionContext.tenantId) {
+    if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to fetch people");
     }
 
@@ -143,13 +143,13 @@ export class PeopleService extends BaseEntityService {
     return await this.db
       .select()
       .from(people)
-      .where(eq(people.tenantId, this.permissionContext.tenantId));
+      .where(eq(people.tenantId, this.permissionContext.tenantId!));
   }
 
   async getPersonById(
     id: string
   ): Promise<(Person & { companies: CompanyWithWeb[]; comms: Comm[] }) | null> {
-    if (!this.permissionContext.tenantId) {
+    if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to fetch a person");
     }
 
@@ -163,7 +163,7 @@ export class PeopleService extends BaseEntityService {
       .where(
         and(
           eq(people.id, id),
-          eq(people.tenantId, this.permissionContext.tenantId)
+          eq(people.tenantId, this.permissionContext.tenantId!)
         )
       );
 
@@ -177,7 +177,7 @@ export class PeopleService extends BaseEntityService {
       .innerJoin(companies, eq(peopleCompanies.companyId, companies.id))
       .where(
         and(
-          eq(peopleCompanies.tenantId, this.permissionContext.tenantId),
+          eq(peopleCompanies.tenantId, this.permissionContext.tenantId!),
           eq(peopleCompanies.personId, id)
         )
       );
@@ -193,7 +193,7 @@ export class PeopleService extends BaseEntityService {
               .from(companyDomains)
               .where(
                 and(
-                  eq(companyDomains.tenantId, this.permissionContext.tenantId),
+                  eq(companyDomains.tenantId, this.permissionContext.tenantId!),
                   inArray(companyDomains.companyId, companyIds)
                 )
               ),
@@ -202,7 +202,10 @@ export class PeopleService extends BaseEntityService {
               .from(companyWebsites)
               .where(
                 and(
-                  eq(companyWebsites.tenantId, this.permissionContext.tenantId),
+                  eq(
+                    companyWebsites.tenantId,
+                    this.permissionContext.tenantId!
+                  ),
                   inArray(companyWebsites.companyId, companyIds)
                 )
               ),
@@ -231,7 +234,7 @@ export class PeopleService extends BaseEntityService {
       .innerJoin(comms, eq(commsPeople.commId, comms.id))
       .where(
         and(
-          eq(commsPeople.tenantId, this.permissionContext.tenantId),
+          eq(commsPeople.tenantId, this.permissionContext.tenantId!),
           eq(commsPeople.personId, id)
         )
       );
@@ -250,7 +253,7 @@ export class PeopleService extends BaseEntityService {
   async createPerson(
     data: Omit<NewPerson, "id" | "tenantId" | "createdAt" | "updatedAt">
   ): Promise<Person> {
-    if (!this.permissionContext.tenantId) {
+    if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to create a person");
     }
 
@@ -262,7 +265,7 @@ export class PeopleService extends BaseEntityService {
       .insert(people)
       .values({
         ...data,
-        tenantId: this.permissionContext.tenantId,
+        tenantId: this.permissionContext.tenantId!!,
       })
       .returning();
 
@@ -272,7 +275,7 @@ export class PeopleService extends BaseEntityService {
   }
 
   async updatePerson(id: string, updates: PersonUpdate): Promise<Person> {
-    if (!this.permissionContext.tenantId) {
+    if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to update a person");
     }
 
@@ -289,7 +292,7 @@ export class PeopleService extends BaseEntityService {
       .where(
         and(
           eq(people.id, id),
-          eq(people.tenantId, this.permissionContext.tenantId)
+          eq(people.tenantId, this.permissionContext.tenantId!)
         )
       )
       .returning();
@@ -300,7 +303,7 @@ export class PeopleService extends BaseEntityService {
   }
 
   async deletePerson(id: string): Promise<void> {
-    if (!this.permissionContext.tenantId) {
+    if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to delete a person");
     }
 
@@ -313,7 +316,7 @@ export class PeopleService extends BaseEntityService {
       .where(
         and(
           eq(people.id, id),
-          eq(people.tenantId, this.permissionContext.tenantId)
+          eq(people.tenantId, this.permissionContext.tenantId!)
         )
       );
 
@@ -330,11 +333,11 @@ export class PeopleService extends BaseEntityService {
     role?: string,
     isPrimary?: boolean
   ): Promise<void> {
-    if (!this.permissionContext.tenantId)
+    if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
 
     await this.db.insert(peopleCompanies).values({
-      tenantId: this.permissionContext.tenantId,
+      tenantId: this.permissionContext.tenantId!!,
       personId,
       companyId,
       role,
@@ -343,14 +346,14 @@ export class PeopleService extends BaseEntityService {
   }
 
   async removeCompanyLink(personId: string, companyId: string): Promise<void> {
-    if (!this.permissionContext.tenantId)
+    if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
 
     await this.db
       .delete(peopleCompanies)
       .where(
         and(
-          eq(peopleCompanies.tenantId, this.permissionContext.tenantId),
+          eq(peopleCompanies.tenantId, this.permissionContext.tenantId!),
           eq(peopleCompanies.personId, personId),
           eq(peopleCompanies.companyId, companyId)
         )
@@ -363,7 +366,7 @@ export class PeopleService extends BaseEntityService {
     role?: string,
     isPrimary?: boolean
   ): Promise<Company> {
-    if (!this.permissionContext.tenantId)
+    if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
 
     const normalizedDomains = normalizeDomainEntries(data.domains);
@@ -375,7 +378,7 @@ export class PeopleService extends BaseEntityService {
         .insert(companies)
         .values({
           ...companyData,
-          tenantId: this.permissionContext.tenantId,
+          tenantId: this.permissionContext.tenantId!!,
         })
         .returning();
 
@@ -384,7 +387,7 @@ export class PeopleService extends BaseEntityService {
       if (normalizedDomains.length > 0) {
         await tx.insert(companyDomains).values(
           normalizedDomains.map((d) => ({
-            tenantId: this.permissionContext.tenantId!,
+            tenantId: this.permissionContext.tenantId!!,
             companyId: created.id,
             domain: d.domain,
             isPrimary: d.isPrimary,
@@ -395,7 +398,7 @@ export class PeopleService extends BaseEntityService {
       if (normalizedWebsites.length > 0) {
         await tx.insert(companyWebsites).values(
           normalizedWebsites.map((w) => ({
-            tenantId: this.permissionContext.tenantId!,
+            tenantId: this.permissionContext.tenantId!!,
             companyId: created.id,
             url: w.url,
             type: w.type,
@@ -417,7 +420,7 @@ export class PeopleService extends BaseEntityService {
   ========================= */
 
   async addCommLink(personId: string, commId: string): Promise<void> {
-    if (!this.permissionContext.tenantId)
+    if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
 
     // Check if link already exists
@@ -426,7 +429,7 @@ export class PeopleService extends BaseEntityService {
       .from(commsPeople)
       .where(
         and(
-          eq(commsPeople.tenantId, this.permissionContext.tenantId),
+          eq(commsPeople.tenantId, this.permissionContext.tenantId!),
           eq(commsPeople.personId, personId),
           eq(commsPeople.commId, commId)
         )
@@ -435,7 +438,7 @@ export class PeopleService extends BaseEntityService {
 
     if (!existingLink) {
       await this.db.insert(commsPeople).values({
-        tenantId: this.permissionContext.tenantId,
+        tenantId: this.permissionContext.tenantId!!,
         personId,
         commId,
       });
@@ -443,14 +446,14 @@ export class PeopleService extends BaseEntityService {
   }
 
   async removeCommLink(personId: string, commId: string): Promise<void> {
-    if (!this.permissionContext.tenantId)
+    if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
 
     await this.db
       .delete(commsPeople)
       .where(
         and(
-          eq(commsPeople.tenantId, this.permissionContext.tenantId),
+          eq(commsPeople.tenantId, this.permissionContext.tenantId!),
           eq(commsPeople.personId, personId),
           eq(commsPeople.commId, commId)
         )
@@ -464,7 +467,7 @@ export class PeopleService extends BaseEntityService {
       "id" | "tenantId" | "createdAt" | "updatedAt" | "canonicalValue"
     >
   ): Promise<Comm> {
-    if (!this.permissionContext.tenantId)
+    if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
 
     // Normalize input first to ensure consistent comparison
@@ -479,7 +482,7 @@ export class PeopleService extends BaseEntityService {
       .from(comms)
       .where(
         and(
-          eq(comms.tenantId, this.permissionContext.tenantId),
+          eq(comms.tenantId, this.permissionContext.tenantId!),
           eq(comms.type, data.type),
           eq(comms.canonicalValue, canonicalValue)
         )
@@ -490,7 +493,7 @@ export class PeopleService extends BaseEntityService {
       [comm] = await this.db
         .insert(comms)
         .values({
-          tenantId: this.permissionContext.tenantId,
+          tenantId: this.permissionContext.tenantId!!,
           type: data.type,
           value,
           canonicalValue,
@@ -506,7 +509,7 @@ export class PeopleService extends BaseEntityService {
       .from(commsPeople)
       .where(
         and(
-          eq(commsPeople.tenantId, this.permissionContext.tenantId),
+          eq(commsPeople.tenantId, this.permissionContext.tenantId!),
           eq(commsPeople.personId, personId),
           eq(commsPeople.commId, comm.id)
         )

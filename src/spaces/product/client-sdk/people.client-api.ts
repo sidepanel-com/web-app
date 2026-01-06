@@ -32,7 +32,7 @@ export class PeopleClientAPI {
 
   async getPerson(personId: string) {
     const response = await this.fetchClient.get(`/v1/people/${personId}`);
-    return response as ApiResponse<Person>;
+    return response as ApiResponse<Person & { companies: CompanyWithWeb[]; comms: Comm[] }>;
   }
 
   async createPerson(
@@ -110,7 +110,7 @@ export class PeopleClientAPI {
 
   async createNewComm(
     personId: string,
-    data: Omit<NewComm, "id" | "tenantId" | "createdAt" | "updatedAt">
+    data: Omit<NewComm, "id" | "tenantId" | "createdAt" | "updatedAt" | "canonicalValue">
   ) {
     const response = await this.fetchClient.post(
       `/v1/people/${personId}/comms`,

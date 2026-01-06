@@ -30,13 +30,16 @@ interface CustomRelationship {
 // Generic service for custom entities defined by tenant owners
 export class CustomEntityService extends BaseEntityService {
   private entityConfig: CustomEntityConfig;
+  private dangerSupabaseAdmin: SupabaseClient;
 
   constructor(
+    db: any,
     supabaseClient: SupabaseClient,
     permissionContext: any,
     entityConfig: CustomEntityConfig
   ) {
-    super(supabaseClient, permissionContext);
+    super(db, permissionContext);
+    this.dangerSupabaseAdmin = supabaseClient;
     this.entityConfig = entityConfig;
   }
 
@@ -108,7 +111,7 @@ export class CustomEntityService extends BaseEntityService {
     // Add tenant scoping and user context
     const entityData = {
       ...data,
-      tenant_id: this.permissionContext.tenantId,
+      tenant_id: this.permissionContext.tenantId!,
       created_by: this.permissionContext.userId,
       created_at: new Date().toISOString(),
     };
@@ -132,7 +135,7 @@ export class CustomEntityService extends BaseEntityService {
       .from(this.entityConfig.tableName)
       .select("*")
       .eq("id", id)
-      .eq("tenant_id", this.permissionContext.tenantId)
+      .eq("tenant_id", this.permissionContext.tenantId!)
       .single();
 
     if (error) throw error;
@@ -147,7 +150,7 @@ export class CustomEntityService extends BaseEntityService {
     let query = this.dangerSupabaseAdmin
       .from(this.entityConfig.tableName)
       .select("*")
-      .eq("tenant_id", this.permissionContext.tenantId);
+      .eq("tenant_id", this.permissionContext.tenantId!);
 
     // Apply permission-based filtering
     const permission = this.entityConfig.permissions.read;
@@ -184,7 +187,7 @@ export class CustomEntityService extends BaseEntityService {
       .from(this.entityConfig.tableName)
       .update(updateData)
       .eq("id", id)
-      .eq("tenant_id", this.permissionContext.tenantId)
+      .eq("tenant_id", this.permissionContext.tenantId!)
       .select()
       .single();
 
@@ -201,7 +204,7 @@ export class CustomEntityService extends BaseEntityService {
       .from(this.entityConfig.tableName)
       .delete()
       .eq("id", id)
-      .eq("tenant_id", this.permissionContext.tenantId);
+      .eq("tenant_id", this.permissionContext.tenantId!);
 
     if (error) throw error;
   }
@@ -212,7 +215,7 @@ export class CustomEntityService extends BaseEntityService {
       .from(this.entityConfig.tableName)
       .select("assigned_to")
       .eq("id", entityId)
-      .eq("tenant_id", this.permissionContext.tenantId)
+      .eq("tenant_id", this.permissionContext.tenantId!)
       .single();
 
     if (error) return false;
@@ -224,7 +227,7 @@ export class CustomEntityService extends BaseEntityService {
       .from(this.entityConfig.tableName)
       .select("created_by")
       .eq("id", entityId)
-      .eq("tenant_id", this.permissionContext.tenantId)
+      .eq("tenant_id", this.permissionContext.tenantId!)
       .single();
 
     if (error) return false;
@@ -233,6 +236,7 @@ export class CustomEntityService extends BaseEntityService {
 
   // Factory method to create service instances for custom entities
   static async createForEntity(
+    db: any,
     dangerSupabaseAdmin: SupabaseClient,
     permissionContext: any,
     entityName: string
@@ -246,6 +250,7 @@ export class CustomEntityService extends BaseEntityService {
     );
 
     return new CustomEntityService(
+      db,
       dangerSupabaseAdmin,
       permissionContext,
       entityConfig

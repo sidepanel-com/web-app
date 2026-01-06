@@ -44,7 +44,7 @@ type UserRole = "owner" | "admin" | "member" | "viewer";
 
 const editUserRoleSchema = z.object({
   role: z.enum(["owner", "admin", "member", "viewer"], {
-    required_error: "Please select a role",
+    message: "Please select a role",
   }),
 });
 
