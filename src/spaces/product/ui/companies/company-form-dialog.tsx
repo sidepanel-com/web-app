@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -32,27 +32,80 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/ui-primitives/ui/alert-dialog";
-import { Company, Person, Comm } from "@db/product/types";
-import { Trash2, Plus, X, User } from "lucide-react";
+import type { CompanyWithWeb, Person, Comm } from "@db/product/types";
+import { Trash2, Plus, X, User, Star } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui-primitives/ui/tabs";
 import { Badge } from "@/ui-primitives/ui/badge";
 import { ScrollArea } from "@/ui-primitives/ui/scroll-area";
 import { usePeople } from "@/spaces/product/hooks/use-people";
-import { formatCommValue, CommType } from "@db/product/comm-validation";
+import { formatCommValue, CommType } from "@/spaces/product/lib/comm-validation";
+import {
+  companyDomainInputSchema,
+  companyWebsiteInputSchema,
+} from "@/spaces/product/lib/company-validation";
 
-const companySchema = z.object({
-  name: z.string().min(1, "Company name is required"),
-  domain: z.string().optional(),
-  description: z.string().optional(),
-  logoUrl: z.string().optional(),
+const domainEntrySchema = companyDomainInputSchema.extend({
+  isPrimary: z.boolean().optional().default(false),
 });
+
+const websiteEntrySchema = companyWebsiteInputSchema.extend({
+  isPrimary: z.boolean().optional().default(false),
+});
+
+const companySchema = z
+  .object({
+    name: z.string().min(1, "Company name is required"),
+    description: z.string().optional(),
+    logoUrl: z.string().optional(),
+    domains: z.array(domainEntrySchema).default([]),
+    websites: z.array(websiteEntrySchema).default([]),
+  })
+  .superRefine((data, ctx) => {
+    const domainSet = new Set<string>();
+    data.domains.forEach((d, idx) => {
+      if (domainSet.has(d.domain)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Duplicate domain",
+          path: ["domains", idx, "domain"],
+        });
+      }
+      domainSet.add(d.domain);
+    });
+    if (data.domains.filter((d) => d.isPrimary).length > 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Only one primary domain is allowed",
+        path: ["domains"],
+      });
+    }
+
+    const websiteSet = new Set<string>();
+    data.websites.forEach((w, idx) => {
+      if (websiteSet.has(w.url)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Duplicate website",
+          path: ["websites", idx, "url"],
+        });
+      }
+      websiteSet.add(w.url);
+    });
+    if (data.websites.filter((w) => w.isPrimary).length > 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Only one primary website is allowed",
+        path: ["websites"],
+      });
+    }
+  });
 
 type CompanyFormValues = z.infer<typeof companySchema>;
 
 interface CompanyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  company: (Company & { people: Person[]; comms: Comm[] }) | null;
+  company: (CompanyWithWeb & { people: Person[]; comms: Comm[] }) | null;
   onSubmit: (data: CompanyFormValues) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
   onAddPerson?: (personId: string) => Promise<void>;
@@ -83,31 +136,52 @@ export function CompanyFormDialog({
   const [newCommType, setNewCommType] = useState<string>("email");
   const [newCommValue, setNewCommValue] = useState("");
   const [newCommExtra, setNewCommExtra] = useState("");
+  const [newDomain, setNewDomain] = useState("");
+  const [newWebsiteUrl, setNewWebsiteUrl] = useState("");
+  const [newWebsiteType, setNewWebsiteType] = useState("");
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companySchema),
     defaultValues: {
       name: "",
-      domain: "",
       description: "",
       logoUrl: "",
+      domains: [],
+      websites: [],
     },
+  });
+
+  const domainsArray = useFieldArray({ control: form.control, name: "domains" });
+  const websitesArray = useFieldArray({
+    control: form.control,
+    name: "websites",
   });
 
   useEffect(() => {
     if (company) {
       form.reset({
         name: company.name || "",
-        domain: company.domain || "",
         description: company.description || "",
         logoUrl: company.logoUrl || "",
+        domains:
+          company.domains?.map((d) => ({
+            domain: d.domain,
+            isPrimary: !!d.isPrimary,
+          })) ?? [],
+        websites:
+          company.websites?.map((w) => ({
+            url: w.url,
+            type: w.type ?? undefined,
+            isPrimary: !!w.isPrimary,
+          })) ?? [],
       });
     } else {
       form.reset({
         name: "",
-        domain: "",
         description: "",
         logoUrl: "",
+        domains: [],
+        websites: [],
       });
       setActiveTab("details");
     }
@@ -130,6 +204,112 @@ export function CompanyFormDialog({
     !company?.people.some(cp => cp.id === p.id)
   );
 
+  const watchedDomains = form.watch("domains");
+  const watchedWebsites = form.watch("websites");
+
+  const addDomain = () => {
+    const parsed = companyDomainInputSchema.safeParse({ domain: newDomain });
+    if (!parsed.success) {
+      form.setError("domains", {
+        type: "manual",
+        message: parsed.error.issues[0]?.message ?? "Invalid domain",
+      });
+      return;
+    }
+
+    const existing = new Set(
+      (form.getValues("domains") ?? []).map((d) => d.domain)
+    );
+    if (existing.has(parsed.data.domain)) {
+      form.setError("domains", {
+        type: "manual",
+        message: "Duplicate domain",
+      });
+      return;
+    }
+
+    domainsArray.append({
+      domain: parsed.data.domain,
+      isPrimary: domainsArray.fields.length === 0,
+    });
+    setNewDomain("");
+    form.clearErrors("domains");
+  };
+
+  const setPrimaryDomain = (idx: number) => {
+    const current = form.getValues("domains") ?? [];
+    form.setValue(
+      "domains",
+      current.map((d, i) => ({ ...d, isPrimary: i === idx })),
+      { shouldDirty: true, shouldValidate: true }
+    );
+  };
+
+  const removeDomain = (idx: number) => {
+    const wasPrimary = !!(form.getValues("domains")?.[idx]?.isPrimary);
+    domainsArray.remove(idx);
+    if (wasPrimary) {
+      const next = form.getValues("domains") ?? [];
+      if (next.length > 0 && !next.some((d) => d.isPrimary)) {
+        setPrimaryDomain(0);
+      }
+    }
+  };
+
+  const addWebsite = () => {
+    const parsed = companyWebsiteInputSchema.safeParse({
+      url: newWebsiteUrl,
+      type: newWebsiteType || undefined,
+    });
+    if (!parsed.success) {
+      form.setError("websites", {
+        type: "manual",
+        message: parsed.error.issues[0]?.message ?? "Invalid website URL",
+      });
+      return;
+    }
+
+    const existing = new Set(
+      (form.getValues("websites") ?? []).map((w) => w.url)
+    );
+    if (existing.has(parsed.data.url)) {
+      form.setError("websites", {
+        type: "manual",
+        message: "Duplicate website",
+      });
+      return;
+    }
+
+    websitesArray.append({
+      url: parsed.data.url,
+      type: parsed.data.type,
+      isPrimary: websitesArray.fields.length === 0,
+    });
+    setNewWebsiteUrl("");
+    setNewWebsiteType("");
+    form.clearErrors("websites");
+  };
+
+  const setPrimaryWebsite = (idx: number) => {
+    const current = form.getValues("websites") ?? [];
+    form.setValue(
+      "websites",
+      current.map((w, i) => ({ ...w, isPrimary: i === idx })),
+      { shouldDirty: true, shouldValidate: true }
+    );
+  };
+
+  const removeWebsite = (idx: number) => {
+    const wasPrimary = !!(form.getValues("websites")?.[idx]?.isPrimary);
+    websitesArray.remove(idx);
+    if (wasPrimary) {
+      const next = form.getValues("websites") ?? [];
+      if (next.length > 0 && !next.some((w) => w.isPrimary)) {
+        setPrimaryWebsite(0);
+      }
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full max-w-none flex flex-col p-0 overflow-hidden data-[state=open]:duration-200 data-[state=closed]:duration-150">
@@ -144,246 +324,399 @@ export function CompanyFormDialog({
             <TabsTrigger value="comms" disabled={!company}>Comms</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 px-6">
-            <TabsContent value="details" className="mt-4 pb-4">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Name</FormLabel>
+
+          <TabsContent value="details" className="mt-4 p-6 overflow-x-scroll">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Acme Inc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="domains"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Domains</FormLabel>
+                      <div className="flex gap-2">
                         <FormControl>
-                          <Input placeholder="Acme Inc." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="domain"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Domain</FormLabel>
-                        <FormControl>
-                          <Input placeholder="acme.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="logoUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Logo URL</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="About this company..."
-                            className="resize-none"
-                            {...field}
+                          <Input
+                            placeholder="acme.com"
+                            value={newDomain}
+                            onChange={(e) => setNewDomain(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                addDomain();
+                              }
+                            }}
                           />
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button type="submit">
-                      {company ? "Save Changes" : "Create Company"}
+                        <Button type="button" variant="secondary" onClick={addDomain}>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        {domainsArray.fields.length ? (
+                          domainsArray.fields.map((d, idx) => {
+                            const domain = watchedDomains?.[idx]?.domain ?? d.domain;
+                            const isPrimary = !!(watchedDomains?.[idx]?.isPrimary ?? d.isPrimary);
+                            return (
+                              <div
+                                key={d.id}
+                                className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1"
+                              >
+                                <span className="text-xs">{domain}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => setPrimaryDomain(idx)}
+                                  title="Set primary"
+                                >
+                                  <Star
+                                    className={`h-3 w-3 ${isPrimary ? "fill-primary text-primary" : ""
+                                      }`}
+                                  />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => removeDomain(idx)}
+                                  title="Remove"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            No domains yet.
+                          </span>
+                        )}
+                      </div>
+
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="websites"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Websites</FormLabel>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input
+                              placeholder="https://acme.com"
+                              value={newWebsiteUrl}
+                              onChange={(e) => setNewWebsiteUrl(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addWebsite();
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={addWebsite}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                        <Input
+                          placeholder="Type (e.g. homepage, docs) - optional"
+                          value={newWebsiteType}
+                          onChange={(e) => setNewWebsiteType(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        {websitesArray.fields.length ? (
+                          websitesArray.fields.map((w, idx) => {
+                            const url = watchedWebsites?.[idx]?.url ?? w.url;
+                            const type = watchedWebsites?.[idx]?.type ?? w.type;
+                            const isPrimary = !!(watchedWebsites?.[idx]?.isPrimary ?? w.isPrimary);
+                            return (
+                              <div
+                                key={w.id}
+                                className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1"
+                              >
+                                <span className="text-xs">{url}</span>
+                                {type ? (
+                                  <Badge variant="outline" className="text-[10px] h-5">
+                                    {type}
+                                  </Badge>
+                                ) : null}
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => setPrimaryWebsite(idx)}
+                                  title="Set primary"
+                                >
+                                  <Star
+                                    className={`h-3 w-3 ${isPrimary ? "fill-primary text-primary" : ""
+                                      }`}
+                                  />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => removeWebsite(idx)}
+                                  title="Remove"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            No websites yet.
+                          </span>
+                        )}
+                      </div>
+
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="logoUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Logo URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="About this company..."
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="submit">
+                    {company ? "Save Changes" : "Create Company"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </TabsContent>
+
+          <TabsContent value="people" className="mt-4 space-y-6  p-6 overflow-x-scroll">
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Associated People</h4>
+              <div className="space-y-2">
+                {company?.people.length ? company.people.map(p => (
+                  <div key={p.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{p.firstName} {p.lastName}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRemovePerson?.(p.id)}>
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
-                </form>
-              </Form>
-            </TabsContent>
+                )) : (
+                  <p className="text-xs text-muted-foreground italic">No people associated.</p>
+                )}
+              </div>
+            </div>
 
-            <TabsContent value="people" className="mt-4 space-y-6 pb-4">
+            <div className="space-y-2 border-t pt-4">
+              <h4 className="text-sm font-medium">Link Existing Person</h4>
               <div className="space-y-2">
-                <h4 className="text-sm font-medium">Associated People</h4>
-                <div className="space-y-2">
-                  {company?.people.length ? company.people.map(p => (
-                    <div key={p.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{p.firstName} {p.lastName}</span>
+                <Input
+                  placeholder="Search people..."
+                  value={personSearch}
+                  onChange={e => setPersonSearch(e.target.value)}
+                  className="text-xs h-8"
+                />
+                {personSearch && (
+                  <div className="border rounded-md divide-y max-h-32 overflow-y-auto">
+                    {filteredAllPeople.map(p => (
+                      <div key={p.id} className="flex items-center justify-between p-2 hover:bg-muted cursor-pointer" onClick={() => onAddPerson?.(p.id)}>
+                        <span className="text-xs">{p.firstName} {p.lastName}</span>
+                        <Plus className="h-3 w-3" />
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRemovePerson?.(p.id)}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )) : (
-                    <p className="text-xs text-muted-foreground italic">No people associated.</p>
-                  )}
-                </div>
+                    ))}
+                    {!filteredAllPeople.length && <div className="p-2 text-xs text-muted-foreground">No matches found.</div>}
+                  </div>
+                )}
               </div>
+            </div>
 
-              <div className="space-y-2 border-t pt-4">
-                <h4 className="text-sm font-medium">Link Existing Person</h4>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Search people..."
-                    value={personSearch}
-                    onChange={e => setPersonSearch(e.target.value)}
-                    className="text-xs h-8"
-                  />
-                  {personSearch && (
-                    <div className="border rounded-md divide-y max-h-32 overflow-y-auto">
-                      {filteredAllPeople.map(p => (
-                        <div key={p.id} className="flex items-center justify-between p-2 hover:bg-muted cursor-pointer" onClick={() => onAddPerson?.(p.id)}>
-                          <span className="text-xs">{p.firstName} {p.lastName}</span>
-                          <Plus className="h-3 w-3" />
-                        </div>
-                      ))}
-                      {!filteredAllPeople.length && <div className="p-2 text-xs text-muted-foreground">No matches found.</div>}
-                    </div>
-                  )}
-                </div>
+            <div className="space-y-2 border-t pt-4">
+              <h4 className="text-sm font-medium">Create & Link New Person</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="First name..."
+                  value={newPersonFirst}
+                  onChange={e => setNewPersonFirst(e.target.value)}
+                  className="text-xs h-8"
+                />
+                <Input
+                  placeholder="Last name..."
+                  value={newPersonLast}
+                  onChange={e => setNewPersonLast(e.target.value)}
+                  className="text-xs h-8"
+                />
               </div>
+              <Button size="sm" className="w-full mt-2" onClick={() => {
+                if (newPersonFirst && newPersonLast) {
+                  onCreatePerson?.(newPersonFirst, newPersonLast);
+                  setNewPersonFirst("");
+                  setNewPersonLast("");
+                }
+              }}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add New Person
+              </Button>
+            </div>
+          </TabsContent>
 
-              <div className="space-y-2 border-t pt-4">
-                <h4 className="text-sm font-medium">Create & Link New Person</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    placeholder="First name..."
-                    value={newPersonFirst}
-                    onChange={e => setNewPersonFirst(e.target.value)}
-                    className="text-xs h-8"
-                  />
-                  <Input
-                    placeholder="Last name..."
-                    value={newPersonLast}
-                    onChange={e => setNewPersonLast(e.target.value)}
-                    className="text-xs h-8"
-                  />
-                </div>
-                <Button size="sm" className="w-full mt-2" onClick={() => {
-                  if (newPersonFirst && newPersonLast) {
-                    onCreatePerson?.(newPersonFirst, newPersonLast);
-                    setNewPersonFirst("");
-                    setNewPersonLast("");
-                  }
-                }}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add New Person
-                </Button>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="comms" className="mt-4 space-y-6 pb-4">
+          <TabsContent value="comms" className="mt-4 space-y-6  p-6 overflow-x-scroll">
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Linked Comms</h4>
               <div className="space-y-2">
-                <h4 className="text-sm font-medium">Linked Comms</h4>
-                <div className="space-y-2">
-                  {company?.comms.length ? company.comms.map(c => (
-                    <div key={c.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <Badge variant="outline" className="text-[10px] h-5 capitalize">{c.type}</Badge>
-                        <span className="text-sm font-medium truncate">
-                          {formatCommValue(c.type as CommType, c.value)}
-                        </span>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => onRemoveComm?.(c.id)}>
-                        <X className="h-4 w-4" />
-                      </Button>
+                {company?.comms.length ? company.comms.map(c => (
+                  <div key={c.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <Badge variant="outline" className="text-[10px] h-5 capitalize">{c.type}</Badge>
+                      <span className="text-sm font-medium truncate">
+                        {formatCommValue(c.type as CommType, c.value)}
+                      </span>
                     </div>
-                  )) : (
-                    <p className="text-xs text-muted-foreground italic">No comms linked.</p>
-                  )}
-                </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => onRemoveComm?.(c.id)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )) : (
+                  <p className="text-xs text-muted-foreground italic">No comms linked.</p>
+                )}
               </div>
+            </div>
 
-              <div className="space-y-2 border-t pt-4">
-                <h4 className="text-sm font-medium">Add New Communication</h4>
-                <div className="space-y-2">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
-                      <select
-                        className="flex h-8 w-32 rounded-md border border-input bg-transparent px-2 py-1 text-[10px] shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        value={newCommType}
-                        onChange={e => {
-                          setNewCommType(e.target.value);
-                          setNewCommValue("");
-                          setNewCommExtra("");
-                        }}
-                      >
-                        <option value="email">Email</option>
-                        <option value="phone">Phone</option>
-                        <option value="linkedin">LinkedIn</option>
-                        <option value="slack">Slack</option>
-                        <option value="whatsapp">WhatsApp</option>
-                        <option value="other">Other</option>
-                      </select>
+            <div className="space-y-2 border-t pt-4">
+              <h4 className="text-sm font-medium">Add New Communication</h4>
+              <div className="space-y-2">
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <select
+                      className="flex h-8 w-32 rounded-md border border-input bg-transparent px-2 py-1 text-[10px] shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      value={newCommType}
+                      onChange={e => {
+                        setNewCommType(e.target.value);
+                        setNewCommValue("");
+                        setNewCommExtra("");
+                      }}
+                    >
+                      <option value="email">Email</option>
+                      <option value="phone">Phone</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="slack">Slack</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="other">Other</option>
+                    </select>
 
-                      {newCommType === "slack" && (
-                        <Input
-                          placeholder="Workspace..."
-                          value={newCommExtra}
-                          onChange={e => setNewCommExtra(e.target.value)}
-                          className="text-xs h-8 flex-1"
-                        />
-                      )}
-
-                      {newCommType === "other" && (
-                        <Input
-                          placeholder="Label..."
-                          value={newCommExtra}
-                          onChange={e => setNewCommExtra(e.target.value)}
-                          className="text-xs h-8 flex-1"
-                        />
-                      )}
-                    </div>
-
-                    <div className="flex gap-2">
+                    {newCommType === "slack" && (
                       <Input
-                        placeholder={
-                          newCommType === "email" ? "Email address..." :
-                            newCommType === "phone" ? "Phone number..." :
-                              newCommType === "linkedin" ? "LinkedIn URL..." :
-                                newCommType === "slack" ? "Handle..." :
-                                  newCommType === "whatsapp" ? "WhatsApp number..." :
-                                    "Value..."
-                        }
-                        value={newCommValue}
-                        onChange={e => setNewCommValue(e.target.value)}
+                        placeholder="Workspace..."
+                        value={newCommExtra}
+                        onChange={e => setNewCommExtra(e.target.value)}
                         className="text-xs h-8 flex-1"
                       />
-                      <Button size="sm" onClick={() => {
-                        if (newCommValue) {
-                          let value: any;
-                          if (newCommType === "email") value = { address: newCommValue };
-                          else if (newCommType === "phone" || newCommType === "whatsapp") value = { number: newCommValue };
-                          else if (newCommType === "linkedin") value = { url: newCommValue };
-                          else if (newCommType === "slack") value = { handle: newCommValue, workspace: newCommExtra };
-                          else if (newCommType === "other") value = { label: newCommExtra, value: newCommValue };
+                    )}
 
-                          onAddComm?.(newCommType, value);
-                          setNewCommValue("");
-                          setNewCommExtra("");
-                        }
-                      }}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {newCommType === "other" && (
+                      <Input
+                        placeholder="Label..."
+                        value={newCommExtra}
+                        onChange={e => setNewCommExtra(e.target.value)}
+                        className="text-xs h-8 flex-1"
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder={
+                        newCommType === "email" ? "Email address..." :
+                          newCommType === "phone" ? "Phone number..." :
+                            newCommType === "linkedin" ? "LinkedIn URL..." :
+                              newCommType === "slack" ? "Handle..." :
+                                newCommType === "whatsapp" ? "WhatsApp number..." :
+                                  "Value..."
+                      }
+                      value={newCommValue}
+                      onChange={e => setNewCommValue(e.target.value)}
+                      className="text-xs h-8 flex-1"
+                    />
+                    <Button size="sm" onClick={() => {
+                      if (newCommValue) {
+                        let value: any;
+                        if (newCommType === "email") value = { address: newCommValue };
+                        else if (newCommType === "phone" || newCommType === "whatsapp") value = { number: newCommValue };
+                        else if (newCommType === "linkedin") value = { url: newCommValue };
+                        else if (newCommType === "slack") value = { handle: newCommValue, workspace: newCommExtra };
+                        else if (newCommType === "other") value = { label: newCommExtra, value: newCommValue };
+
+                        onAddComm?.(newCommType, value);
+                        setNewCommValue("");
+                        setNewCommExtra("");
+                      }
+                    }}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
-            </TabsContent>
-          </ScrollArea>
+            </div>
+          </TabsContent>
+
         </Tabs>
 
         <SheetFooter className="p-6 pt-2 border-t flex-row gap-2 justify-between items-center">

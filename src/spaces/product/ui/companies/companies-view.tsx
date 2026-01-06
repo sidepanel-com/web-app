@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CompaniesList } from "./companies-list";
 import { CompanyFormDialog } from "./company-form-dialog";
 import { useCompanies } from "@/spaces/product/hooks/use-companies";
-import type { Company, Person, Comm } from "@db/product/types";
+import type { CompanyWithWeb, Person, Comm } from "@db/product/types";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -26,14 +26,16 @@ export function CompaniesView() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<(Company & { people: Person[], comms: Comm[] }) | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<
+    (CompanyWithWeb & { people: Person[]; comms: Comm[] }) | null
+  >(null);
 
   const handleCreateClick = () => {
     setSelectedCompany(null);
     setIsDialogOpen(true);
   };
 
-  const handleEditClick = async (company: Company) => {
+  const handleEditClick = async (company: CompanyWithWeb) => {
     const fullCompany = await getCompany(company.id);
     if (fullCompany) {
       setSelectedCompany(fullCompany);

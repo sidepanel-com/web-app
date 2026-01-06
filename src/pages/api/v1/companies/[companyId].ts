@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import {
   V1ApiService,
-  V1ApiHandlers,
+  type V1ApiHandlers,
 } from "@/spaces/product/server/v1-api-service";
 import { CompaniesService } from "@/spaces/product/server/companies.service";
 
@@ -13,9 +13,25 @@ const schemas = {
   PATCH: z.object({
     companyId: z.string().uuid(),
     name: z.string().optional(),
-    domain: z.string().optional(),
     logoUrl: z.string().optional(),
     description: z.string().optional(),
+    domains: z
+      .array(
+        z.object({
+          domain: z.string().min(1),
+          isPrimary: z.boolean().optional(),
+        })
+      )
+      .optional(),
+    websites: z
+      .array(
+        z.object({
+          url: z.string().min(1),
+          type: z.string().optional(),
+          isPrimary: z.boolean().optional(),
+        })
+      )
+      .optional(),
   }),
   DELETE: z.object({
     companyId: z.string().uuid(),
@@ -63,4 +79,3 @@ export default async function handler(
 ) {
   return new V1ApiService(handlers, schemas).run(req, res);
 }
-

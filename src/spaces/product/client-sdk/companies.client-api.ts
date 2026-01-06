@@ -1,5 +1,23 @@
 import type { ApiClient, ApiResponse } from "@/spaces/platform/client-sdk";
-import type { Company, NewCompany, Person, NewPerson, Comm, NewComm } from "@db/product/types";
+import type {
+  CompanyWithWeb,
+  NewCompany,
+  Person,
+  NewPerson,
+  Comm,
+  NewComm,
+} from "@db/product/types";
+
+type CompanyDomainInput = { domain: string; isPrimary?: boolean };
+type CompanyWebsiteInput = { url: string; type?: string; isPrimary?: boolean };
+type CompanyCreatePayload = Omit<
+  NewCompany,
+  "id" | "tenantId" | "createdAt" | "updatedAt"
+> & {
+  domains?: CompanyDomainInput[];
+  websites?: CompanyWebsiteInput[];
+};
+type CompanyUpdatePayload = Partial<CompanyCreatePayload>;
 
 export class CompaniesClientAPI {
   private fetchClient: ApiClient;
@@ -10,30 +28,28 @@ export class CompaniesClientAPI {
 
   async getCompanies() {
     const response = await this.fetchClient.get("/v1/companies");
-    return response as ApiResponse<Company[]>;
+    return response as ApiResponse<CompanyWithWeb[]>;
   }
 
   async getCompany(companyId: string) {
     const response = await this.fetchClient.get(`/v1/companies/${companyId}`);
-    return response as ApiResponse<Company>;
+    return response as ApiResponse<CompanyWithWeb>;
   }
 
-  async createCompany(
-    data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">
-  ) {
+  async createCompany(data: CompanyCreatePayload) {
     const response = await this.fetchClient.post("/v1/companies", data);
-    return response as ApiResponse<Company>;
+    return response as ApiResponse<CompanyWithWeb>;
   }
 
   async updateCompany(
     companyId: string,
-    data: Partial<Omit<Company, "id" | "tenantId" | "createdAt" | "updatedAt">>
+    data: CompanyUpdatePayload
   ) {
     const response = await this.fetchClient.patch(
       `/v1/companies/${companyId}`,
       data
     );
-    return response as ApiResponse<Company>;
+    return response as ApiResponse<CompanyWithWeb>;
   }
 
   async deleteCompany(companyId: string) {

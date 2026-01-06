@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { db } from "@/spaces/platform/server/db";
 import {
   people,
@@ -6,13 +6,23 @@ import {
   comms,
   commsPeople,
   companies,
+  companyDomains,
+  companyWebsites,
 } from "@db/product/schema";
 import {
   BaseEntityService,
   type PermissionContext,
 } from "@/spaces/platform/server/base-entity.service";
 import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
-import { normalizeComm, type CommType } from "@db/product/comm-validation";
+import {
+  normalizeComm,
+  type CommType,
+} from "@/spaces/product/lib/comm-validation";
+import {
+  normalizeDomain,
+  isValidDomain,
+  tryNormalizeWebsiteUrl,
+} from "@/spaces/product/lib/company-validation";
 
 type Person = InferSelectModel<typeof people>;
 type NewPerson = InferInsertModel<typeof people>;
@@ -24,6 +34,80 @@ type Company = InferSelectModel<typeof companies>;
 type NewCompany = InferInsertModel<typeof companies>;
 type Comm = InferSelectModel<typeof comms>;
 type NewComm = InferInsertModel<typeof comms>;
+
+type CompanyDomain = InferSelectModel<typeof companyDomains>;
+type CompanyWebsite = InferSelectModel<typeof companyWebsites>;
+type CompanyWithWeb = Company & {
+  domains: CompanyDomain[];
+  websites: CompanyWebsite[];
+};
+
+type CompanyCreateInput = Omit<
+  NewCompany,
+  "id" | "tenantId" | "createdAt" | "updatedAt"
+> & {
+  domains?: Array<{ domain: string; isPrimary?: boolean }>;
+  websites?: Array<{ url: string; type?: string; isPrimary?: boolean }>;
+};
+
+function normalizeDomainEntries(input: CompanyCreateInput["domains"]) {
+  const seen = new Set<string>();
+  const result: Array<{ domain: string; isPrimary: boolean }> = [];
+
+  for (const item of input ?? []) {
+    if (!item.domain?.trim()) continue;
+    if (!isValidDomain(item.domain)) {
+      throw new Error(`Invalid domain: ${item.domain}`);
+    }
+    const domain = normalizeDomain(item.domain);
+    if (!domain) continue;
+    if (seen.has(domain)) continue;
+    seen.add(domain);
+    result.push({ domain, isPrimary: !!item.isPrimary });
+  }
+
+  const primaryIdx = result.findIndex((d) => d.isPrimary);
+  if (result.length > 0) {
+    if (primaryIdx === -1) result[0]!.isPrimary = true;
+    else {
+      for (let i = 0; i < result.length; i++)
+        result[i]!.isPrimary = i === primaryIdx;
+    }
+  }
+
+  return result;
+}
+
+function normalizeWebsiteEntries(input: CompanyCreateInput["websites"]) {
+  const seen = new Set<string>();
+  const result: Array<{ url: string; type?: string; isPrimary: boolean }> = [];
+
+  for (const item of input ?? []) {
+    if (!item.url?.trim()) continue;
+    const normalized = tryNormalizeWebsiteUrl(item.url);
+    if (!normalized) {
+      throw new Error(`Invalid website URL: ${item.url}`);
+    }
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push({
+      url: normalized,
+      type: item.type?.trim() || undefined,
+      isPrimary: !!item.isPrimary,
+    });
+  }
+
+  const primaryIdx = result.findIndex((w) => w.isPrimary);
+  if (result.length > 0) {
+    if (primaryIdx === -1) result[0]!.isPrimary = true;
+    else {
+      for (let i = 0; i < result.length; i++)
+        result[i]!.isPrimary = i === primaryIdx;
+    }
+  }
+
+  return result;
+}
 
 export class PeopleService extends BaseEntityService {
   constructor(drizzleClient: typeof db, permissionContext: PermissionContext) {
@@ -64,7 +148,7 @@ export class PeopleService extends BaseEntityService {
 
   async getPersonById(
     id: string
-  ): Promise<(Person & { companies: Company[]; comms: Comm[] }) | null> {
+  ): Promise<(Person & { companies: CompanyWithWeb[]; comms: Comm[] }) | null> {
     if (!this.permissionContext.tenantId) {
       throw new Error("Tenant ID is required to fetch a person");
     }
@@ -98,6 +182,47 @@ export class PeopleService extends BaseEntityService {
         )
       );
 
+    const linkedCompanies = personCompaniesList.map((pc) => pc.company);
+    const companyIds = linkedCompanies.map((c) => c.id);
+
+    const [domains, websites] =
+      companyIds.length > 0
+        ? await Promise.all([
+            this.db
+              .select()
+              .from(companyDomains)
+              .where(
+                and(
+                  eq(companyDomains.tenantId, this.permissionContext.tenantId),
+                  inArray(companyDomains.companyId, companyIds)
+                )
+              ),
+            this.db
+              .select()
+              .from(companyWebsites)
+              .where(
+                and(
+                  eq(companyWebsites.tenantId, this.permissionContext.tenantId),
+                  inArray(companyWebsites.companyId, companyIds)
+                )
+              ),
+          ])
+        : [[], []];
+
+    const domainsByCompany = new Map<string, CompanyDomain[]>();
+    for (const d of domains as CompanyDomain[]) {
+      const arr = domainsByCompany.get(d.companyId) ?? [];
+      arr.push(d);
+      domainsByCompany.set(d.companyId, arr);
+    }
+
+    const websitesByCompany = new Map<string, CompanyWebsite[]>();
+    for (const w of websites as CompanyWebsite[]) {
+      const arr = websitesByCompany.get(w.companyId) ?? [];
+      arr.push(w);
+      websitesByCompany.set(w.companyId, arr);
+    }
+
     const personCommsList = await this.db
       .select({
         comm: comms,
@@ -113,7 +238,11 @@ export class PeopleService extends BaseEntityService {
 
     return {
       ...person,
-      companies: personCompaniesList.map((pc) => pc.company),
+      companies: linkedCompanies.map((c) => ({
+        ...c,
+        domains: domainsByCompany.get(c.id) ?? [],
+        websites: websitesByCompany.get(c.id) ?? [],
+      })),
       comms: personCommsList.map((pc) => pc.comm),
     };
   }
@@ -230,22 +359,53 @@ export class PeopleService extends BaseEntityService {
 
   async createAndLinkCompany(
     personId: string,
-    data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">,
+    data: CompanyCreateInput,
     role?: string,
     isPrimary?: boolean
   ): Promise<Company> {
     if (!this.permissionContext.tenantId)
       throw new Error("Tenant ID is required");
 
-    const [company] = await this.db
-      .insert(companies)
-      .values({
-        ...data,
-        tenantId: this.permissionContext.tenantId,
-      })
-      .returning();
+    const normalizedDomains = normalizeDomainEntries(data.domains);
+    const normalizedWebsites = normalizeWebsiteEntries(data.websites);
+    const { domains: _domains, websites: _websites, ...companyData } = data;
 
-    if (!company) throw new Error("Failed to create company");
+    const company = await this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(companies)
+        .values({
+          ...companyData,
+          tenantId: this.permissionContext.tenantId,
+        })
+        .returning();
+
+      if (!created) throw new Error("Failed to create company");
+
+      if (normalizedDomains.length > 0) {
+        await tx.insert(companyDomains).values(
+          normalizedDomains.map((d) => ({
+            tenantId: this.permissionContext.tenantId!,
+            companyId: created.id,
+            domain: d.domain,
+            isPrimary: d.isPrimary,
+          }))
+        );
+      }
+
+      if (normalizedWebsites.length > 0) {
+        await tx.insert(companyWebsites).values(
+          normalizedWebsites.map((w) => ({
+            tenantId: this.permissionContext.tenantId!,
+            companyId: created.id,
+            url: w.url,
+            type: w.type,
+            isPrimary: w.isPrimary,
+          }))
+        );
+      }
+
+      return created;
+    });
 
     await this.addCompanyLink(personId, company.id, role, isPrimary);
 

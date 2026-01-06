@@ -2,12 +2,30 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useProductSdk } from "./use-product-sdk";
-import { Company, NewCompany, Person, NewPerson, Comm, NewComm } from "@db/product/types";
+import {
+  CompanyWithWeb,
+  NewCompany,
+  Person,
+  NewPerson,
+  Comm,
+  NewComm,
+} from "@db/product/types";
 import { toast } from "sonner";
+
+type CompanyDomainInput = { domain: string; isPrimary?: boolean };
+type CompanyWebsiteInput = { url: string; type?: string; isPrimary?: boolean };
+type CompanyCreatePayload = Omit<
+  NewCompany,
+  "id" | "tenantId" | "createdAt" | "updatedAt"
+> & {
+  domains?: CompanyDomainInput[];
+  websites?: CompanyWebsiteInput[];
+};
+type CompanyUpdatePayload = Partial<CompanyCreatePayload>;
 
 export function useCompanies() {
   const sdk = useProductSdk();
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [companies, setCompanies] = useState<CompanyWithWeb[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +53,7 @@ export function useCompanies() {
     try {
       const response = await sdk.companies.getCompany(companyId);
       if (response.success && response.data) {
-        return response.data as (Company & { people: Person[], comms: Comm[] });
+        return response.data as (CompanyWithWeb & { people: Person[]; comms: Comm[] });
       }
     } catch (err) {
       console.error(err);
@@ -43,7 +61,7 @@ export function useCompanies() {
     return null;
   }, [sdk]);
 
-  const createCompany = async (data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">) => {
+  const createCompany = async (data: CompanyCreatePayload) => {
     if (!sdk) return;
 
     try {
@@ -62,7 +80,7 @@ export function useCompanies() {
 
   const updateCompany = async (
     companyId: string,
-    data: Partial<Omit<Company, "id" | "tenantId" | "createdAt" | "updatedAt">>
+    data: CompanyUpdatePayload
   ) => {
     if (!sdk) return;
 

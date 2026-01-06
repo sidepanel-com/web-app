@@ -2,11 +2,21 @@ import type { ApiClient, ApiResponse } from "@/spaces/platform/client-sdk";
 import type {
   Person,
   NewPerson,
-  Company,
   NewCompany,
+  CompanyWithWeb,
   Comm,
   NewComm,
 } from "@db/product/types";
+
+type CompanyDomainInput = { domain: string; isPrimary?: boolean };
+type CompanyWebsiteInput = { url: string; type?: string; isPrimary?: boolean };
+type CompanyCreatePayload = Omit<
+  NewCompany,
+  "id" | "tenantId" | "createdAt" | "updatedAt"
+> & {
+  domains?: CompanyDomainInput[];
+  websites?: CompanyWebsiteInput[];
+};
 
 export class PeopleClientAPI {
   private fetchClient: ApiClient;
@@ -67,7 +77,7 @@ export class PeopleClientAPI {
 
   async createNewCompany(
     personId: string,
-    data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">,
+    data: CompanyCreatePayload,
     role?: string,
     isPrimary?: boolean
   ) {
@@ -75,7 +85,7 @@ export class PeopleClientAPI {
       `/v1/people/${personId}/companies`,
       { ...data, role, isPrimary }
     );
-    return response as ApiResponse<Company>;
+    return response as ApiResponse<CompanyWithWeb>;
   }
 
   async removeCompany(personId: string, companyId: string) {

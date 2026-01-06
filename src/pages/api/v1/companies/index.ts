@@ -10,9 +10,25 @@ const schemas = {
   GET: z.object({}),
   POST: z.object({
     name: z.string().min(1),
-    domain: z.string().optional(),
     logoUrl: z.string().optional(),
     description: z.string().optional(),
+    domains: z
+      .array(
+        z.object({
+          domain: z.string().min(1),
+          isPrimary: z.boolean().optional(),
+        })
+      )
+      .optional(),
+    websites: z
+      .array(
+        z.object({
+          url: z.string().min(1),
+          type: z.string().optional(),
+          isPrimary: z.boolean().optional(),
+        })
+      )
+      .optional(),
   }),
 };
 

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { PeopleList } from "./people-list";
 import { PersonFormDialog } from "./person-form-dialog";
 import { usePeople } from "@/spaces/product/hooks/use-people";
-import { Person, Company, Comm } from "@db/product/types";
+import type { Person, CompanyWithWeb, Comm } from "@db/product/types";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -27,7 +27,9 @@ export function PeopleView() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<(Person & { companies: Company[], comms: Comm[] }) | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<
+    (Person & { companies: CompanyWithWeb[]; comms: Comm[] }) | null
+  >(null);
 
   const handleCreateClick = () => {
     setSelectedPerson(null);
@@ -64,9 +66,9 @@ export function PeopleView() {
     }
   };
 
-  const handleCreateCompany = async (name: string, domain?: string) => {
+  const handleCreateCompany = async (name: string) => {
     if (selectedPerson) {
-      const company = await createAndLinkCompany(selectedPerson.id, { name, domain });
+      const company = await createAndLinkCompany(selectedPerson.id, { name });
       if (company) await refreshPerson();
     }
   };

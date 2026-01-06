@@ -2,8 +2,25 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useProductSdk } from "./use-product-sdk";
-import { Person, NewPerson, Company, NewCompany, Comm, NewComm } from "@db/product/types";
+import {
+  Person,
+  NewPerson,
+  CompanyWithWeb,
+  NewCompany,
+  Comm,
+  NewComm,
+} from "@db/product/types";
 import { toast } from "sonner";
+
+type CompanyDomainInput = { domain: string; isPrimary?: boolean };
+type CompanyWebsiteInput = { url: string; type?: string; isPrimary?: boolean };
+type CompanyCreatePayload = Omit<
+  NewCompany,
+  "id" | "tenantId" | "createdAt" | "updatedAt"
+> & {
+  domains?: CompanyDomainInput[];
+  websites?: CompanyWebsiteInput[];
+};
 
 export function usePeople() {
   const sdk = useProductSdk();
@@ -30,20 +47,25 @@ export function usePeople() {
     }
   }, [sdk]);
 
-  const getPerson = useCallback(async (personId: string) => {
-    if (!sdk) return null;
-    try {
-      const response = await sdk.people.getPerson(personId);
-      if (response.success && response.data) {
-        return response.data;
+  const getPerson = useCallback(
+    async (personId: string) => {
+      if (!sdk) return null;
+      try {
+        const response = await sdk.people.getPerson(personId);
+        if (response.success && response.data) {
+          return response.data;
+        }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
-    return null;
-  }, [sdk]);
+      return null;
+    },
+    [sdk]
+  );
 
-  const createPerson = async (data: Omit<NewPerson, "id" | "tenantId" | "createdAt" | "updatedAt">) => {
+  const createPerson = async (
+    data: Omit<NewPerson, "id" | "tenantId" | "createdAt" | "updatedAt">
+  ) => {
     if (!sdk) return;
 
     try {
@@ -130,7 +152,7 @@ export function usePeople() {
 
   const createAndLinkCompany = async (
     personId: string,
-    data: Omit<NewCompany, "id" | "tenantId" | "createdAt" | "updatedAt">,
+    data: CompanyCreatePayload,
     role?: string,
     isPrimary?: boolean
   ) => {
@@ -246,4 +268,3 @@ export function usePeople() {
     removeComm,
   };
 }
-
