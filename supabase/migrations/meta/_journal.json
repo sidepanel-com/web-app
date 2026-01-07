@@ -43,6 +43,13 @@
       "when": 1767612856402,
       "tag": "0005_mushy_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1767717941687,
+      "tag": "0006_brief_brood",
+      "breakpoints": true
     }
   ]
 }

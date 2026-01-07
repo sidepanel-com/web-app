@@ -1,12 +1,13 @@
-import { GetServerSideProps } from "next";
+import type { GetServerSideProps } from "next";
 import { createClient } from "@/spaces/identity/supabase.server-props";
 import { AppPage } from "@/spaces/platform/ui/layout/app-page";
+import { ConnectionsView } from "@/spaces/integrations/ui/connections-view";
 
 export default function DashboardPage() {
   return (
-    <>
-      <AppPage>Todo: Connections</AppPage>
-    </>
+    <AppPage>
+      <ConnectionsView />
+    </AppPage>
   );
 }
 

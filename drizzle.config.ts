@@ -5,10 +5,12 @@ export default {
     "./db/product/schema.ts",
     "./db/product/relations.ts",
     "./db/platform/schema.ts",
-    "./db/platform/relations.ts"
+    "./db/platform/relations.ts",
+    "./db/integrations/schema.ts",
+    "./db/integrations/relations.ts",
   ],
   out: "./supabase/migrations",
   dialect: "postgresql",
   strict: true,
-  verbose: true
+  verbose: true,
 } satisfies Config;
