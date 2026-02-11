@@ -203,6 +203,7 @@ export class ApiService<SM extends SchemaMap> {
         return handleError(err as Error);
       }
     } catch (err) {
+      console.error("API Service Error:", err);
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
@@ -313,6 +314,7 @@ export class UserApiService<SM extends SchemaMap> extends ApiService<SM> {
         return handleError(err as Error);
       }
     } catch (err) {
+      console.error("API Service Error:", err);
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
@@ -481,6 +483,7 @@ export class PathTenantApiService<SM extends SchemaMap> extends ApiService<SM> {
         return handleError(err as Error);
       }
     } catch (err) {
+      console.error("API Service Error:", err);
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",

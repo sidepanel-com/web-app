@@ -5,6 +5,7 @@ import { TenantUsersClientAPI } from "./tenant-users.client-api";
 import { TenantInvitationsClientAPI } from "./tenant-invitations.client-api";
 import { UserProfileClientAPI } from "./user-profile.client-api";
 import { InvitationsClientAPI } from "./invitations.client-api";
+import { IntegrationsClientAPI } from "./integrations.client-api";
 
 export interface ApiClientOptions {
   baseUrl?: string;
@@ -212,6 +213,7 @@ export interface TenantClientSDK extends BaseClientSDK {
   tenant: TenantClientAPI;
   tenantUsers: TenantUsersClientAPI;
   tenantInvitations: TenantInvitationsClientAPI;
+  integrations: IntegrationsClientAPI;
 }
 
 // Add AppClientSDK interface
@@ -324,5 +326,6 @@ export function createTenantClientSDK(
     tenant: new TenantClientAPI(client, tenantSlug),
     tenantUsers: new TenantUsersClientAPI(client, tenantSlug),
     tenantInvitations: new TenantInvitationsClientAPI(client, tenantSlug),
+    integrations: new IntegrationsClientAPI(client, tenantSlug),
   } as TenantClientSDK;
 }

@@ -84,7 +84,7 @@ enabled = true
 # Port to use for Supabase Studio.
 port = 55323
 # External URL of the API server that frontend connects to.
-api_url = "http://127.0.0.1"
+api_url = "http://local.eligeske.com"
 # OpenAI API Key to use for Supabase AI in the Supabase Studio.
 openai_api_key = "env(OPENAI_API_KEY)"
 
@@ -145,13 +145,17 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://localhost:3007"
+site_url = "http://localhost:3008"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
   "http://localhost:3000/**",
   "http://127.0.0.1:3000/**",
   "http://localhost:3007/**",
-  "https://localhost/**"
+  "https://localhost/**",
+  "http://local.eligeske.com",
+  "http://local.eligeske.com/**",
+  "https://raccoon-magnetic-bluejay.ngrok-free.app",
+  "https://raccoon-magnetic-bluejay.ngrok-free.app/**"
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600

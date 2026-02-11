@@ -14,6 +14,18 @@ import { tenants, userProfiles } from "../platform/schema";
 
 export const integrations = pgSchema("integrations");
 
+export const ingestSource = integrations.enum("ingest_source", [
+  "pipedream",
+  "native",
+]);
+
+export const listenerStatus = integrations.enum("listener_status", [
+  "active",
+  "error",
+  "expired",
+  "disabled",
+]);
+
 /* =========================
    CONNECTIONS
 ========================= */
@@ -86,6 +98,77 @@ export const connections = integrations.table(
 );
 
 /* =========================
+   LISTENERS
+========================= */
+
+export const listeners = integrations.table(
+  "listeners",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    tenantId: uuid("tenant_id").notNull(),
+    connectionId: uuid("connection_id").notNull(),
+
+    provider: connectionProvider("provider").notNull(), // google
+    service: text("service").notNull(), // gmail, calendar
+    resourceType: text("resource_type").notNull(), // email, event
+
+    ingestSource: ingestSource("ingest_source").notNull(), // pipedream | native
+    providerListenerId: text("provider_listener_id"), // sc_*, watch id, sub id
+
+    status: listenerStatus("status").default("active").notNull(),
+
+    expiresAt: timestamp("expires_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+
+    lastEventAt: timestamp("last_event_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+
+    config: jsonb("config")
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
+
+    metadata: jsonb("metadata"),
+
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => sql`now()`),
+  },
+  (t) => [
+    index("listeners_tenant_id_idx").on(t.tenantId),
+    index("listeners_connection_id_idx").on(t.connectionId),
+    index("listeners_status_idx").on(t.status),
+    index("listeners_expires_at_idx").on(t.expiresAt),
+
+    foreignKey({
+      columns: [t.tenantId],
+      foreignColumns: [tenants.id],
+      name: "listeners_tenant_id_fkey",
+    }).onDelete("cascade"),
+
+    foreignKey({
+      columns: [t.connectionId],
+      foreignColumns: [connections.id],
+      name: "listeners_connection_id_fkey",
+    }).onDelete("cascade"),
+
+    // One active listener per connection + service + resource
+    uniqueIndex("listeners_connection_service_resource_unique")
+      .on(t.connectionId, t.service, t.resourceType)
+      .where(sql`${t.status} = 'active'`),
+  ]
+);
+
+/* =========================
    SYNC STATE
 ========================= */
 
@@ -143,6 +226,8 @@ export const rawRecords = integrations.table(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     tenantId: uuid("tenant_id").notNull(),
+    listenerId: uuid("listener_id"),
+    ingestSource: ingestSource("ingest_source").notNull(),
     connectionId: uuid("connection_id").notNull(),
     provider: connectionProvider("provider").notNull(),
     externalId: text("external_id").notNull(), // provider's record ID
@@ -166,6 +251,12 @@ export const rawRecords = integrations.table(
     index("raw_records_tenant_id_idx").on(t.tenantId),
     index("raw_records_connection_id_idx").on(t.connectionId),
     index("raw_records_status_idx").on(t.status),
+    index("raw_records_listener_id_idx").on(t.listenerId),
+    foreignKey({
+      columns: [t.listenerId],
+      foreignColumns: [listeners.id],
+      name: "raw_records_listener_id_fkey",
+    }).onDelete("set null"),
     foreignKey({
       columns: [t.tenantId],
       foreignColumns: [tenants.id],
