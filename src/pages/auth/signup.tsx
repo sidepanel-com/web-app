@@ -1,13 +1,18 @@
-import SignupForm from "@/spaces/identity/ui/form-signup";
-import { Logo } from "@/spaces/branding/ui/logo";
+"use client";
+
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 const SignupPage = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/auth/login");
+  }, [router]);
+
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <div className="flex w-full max-w-sm flex-col gap-6">
-        <Logo />
-        <SignupForm />
-      </div>
+      <p className="text-muted-foreground">Redirecting…</p>
     </div>
   );
 };
