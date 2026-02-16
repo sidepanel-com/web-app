@@ -7,6 +7,7 @@ import {
     foreignKey,
     unique,
     index,
+    jsonb,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -130,3 +131,36 @@ export const tenantInvitations = platform.table('tenant_invitations', {
         name: 'tenant_invitations_invited_by_fkey'
     }).onDelete('set null'),
 ]));
+
+/*
+ * API Keys (tenant-scoped; only owners can create/list/revoke)
+ */
+export const apiKeys = platform.table(
+    'api_keys',
+    {
+        id: uuid('id').defaultRandom().primaryKey(),
+        tenantId: uuid('tenant_id').notNull(),
+        createdByProfileId: uuid('created_by_profile_id').notNull(),
+        name: text('name').notNull(),
+        keyPrefix: text('key_prefix').notNull(),
+        keyHash: text('key_hash').notNull(),
+        scopes: jsonb('scopes').$type<string[]>().notNull().default([]),
+        expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'string' }),
+        lastUsedAt: timestamp('last_used_at', { withTimezone: true, mode: 'string' }),
+        createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    },
+    (t) => ([
+        index('api_keys_tenant_id_idx').on(t.tenantId),
+        index('api_keys_key_prefix_idx').on(t.keyPrefix),
+        foreignKey({
+            columns: [t.tenantId],
+            foreignColumns: [tenants.id],
+            name: 'api_keys_tenant_id_fkey',
+        }).onDelete('cascade'),
+        foreignKey({
+            columns: [t.createdByProfileId],
+            foreignColumns: [userProfiles.id],
+            name: 'api_keys_created_by_profile_id_fkey',
+        }).onDelete('cascade'),
+    ])
+);

@@ -1,5 +1,5 @@
-import { SquareTerminal, Bot, BookOpen, LayoutDashboard, Smartphone } from "lucide-react";
-import { type NavSection } from "@/spaces/platform/ui/nav-types";
+import { Smartphone, Server } from "lucide-react";
+import type { NavSection } from "@/spaces/platform/ui/nav-types";
 
 /**
  * Product-specific navigation sections.
@@ -14,7 +14,13 @@ export const productNavigation: NavSection[] = [
         url: "/",
         icon: Smartphone,
       },
+      {
+        title: "API",
+        url: "/api",
+        icon: Server,
+      },
     ],
   },
+
 ];
 

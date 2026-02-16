@@ -1,0 +1,692 @@
+openapi: 3.0.3
+info:
+  title: Product API v1
+  description: |
+    Tenant-scoped product API. Authenticate with a session (cookie) or an API key.
+    All requests require tenant identification via `X-Tenant-Slug` header or `tenantSlug` query param.
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: Relative to app origin
+
+tags:
+  - name: People
+    description: People (contacts) in the comms layer
+  - name: Companies
+    description: Companies in the comms layer
+
+security:
+  - SessionAuth: []
+  - ApiKeyAuth: []
+
+paths:
+  /people:
+    get:
+      tags: [People]
+      summary: List people
+      operationId: listPeople
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+      responses:
+        "200":
+          description: List of people
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessPeopleList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:people:read
+    post:
+      tags: [People]
+      summary: Create a person
+      operationId: createPerson
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                bio: { type: string }
+      responses:
+        "200":
+          description: Created person
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessData"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:people:write
+
+  /people/{personId}:
+    get:
+      tags: [People]
+      summary: Get a person by ID
+      operationId: getPerson
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Person
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessData"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      x-scope: comms:people:read
+    patch:
+      tags: [People]
+      summary: Update a person
+      operationId: updatePerson
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                bio: { type: string }
+      responses:
+        "200":
+          description: Updated person
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessData"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:people:write
+    delete:
+      tags: [People]
+      summary: Delete a person
+      operationId: deletePerson
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessData"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:people:write
+
+  /people/{personId}/companies:
+    post:
+      tags: [People]
+      summary: Link a person to a company (or create company and link)
+      operationId: addPersonCompany
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                companyId: { type: string, format: uuid }
+                name: { type: string }
+                domains: { type: array, items: { type: object } }
+                websites: { type: array, items: { type: object } }
+                role: { type: string }
+                isPrimary: { type: boolean }
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:people:write
+    delete:
+      tags: [People]
+      summary: Remove person-company link
+      operationId: removePersonCompany
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [companyId]
+              properties:
+                companyId: { type: string, format: uuid }
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:people:write
+
+  /people/{personId}/comms:
+    post:
+      tags: [People]
+      summary: Link a comm to a person (or create comm and link)
+      operationId: addPersonComm
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commId: { type: string, format: uuid }
+                type: { type: string, enum: [email, phone, linkedin, slack, whatsapp, other] }
+                value: {}
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:people:write
+    delete:
+      tags: [People]
+      summary: Remove person-comm link
+      operationId: removePersonComm
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: personId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commId]
+              properties:
+                commId: { type: string, format: uuid }
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:people:write
+
+  /companies:
+    get:
+      tags: [Companies]
+      summary: List companies
+      operationId: listCompanies
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+      responses:
+        "200":
+          description: List of companies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessCompaniesList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:companies:read
+    post:
+      tags: [Companies]
+      summary: Create a company
+      operationId: createCompany
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                logoUrl: { type: string }
+                description: { type: string }
+                domains: { type: array, items: { type: object } }
+                websites: { type: array, items: { type: object } }
+      responses:
+        "200":
+          description: Created company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessData"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:companies:write
+
+  /companies/{companyId}:
+    get:
+      tags: [Companies]
+      summary: Get a company by ID
+      operationId: getCompany
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessData"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      x-scope: comms:companies:read
+    patch:
+      tags: [Companies]
+      summary: Update a company
+      operationId: updateCompany
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                logoUrl: { type: string }
+                description: { type: string }
+                domains: { type: array }
+                websites: { type: array }
+      responses:
+        "200":
+          description: Updated company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessData"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:companies:write
+    delete:
+      tags: [Companies]
+      summary: Delete a company
+      operationId: deleteCompany
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:companies:write
+
+  /companies/{companyId}/people:
+    post:
+      tags: [Companies]
+      summary: Link a person to a company
+      operationId: addCompanyPerson
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                personId: { type: string, format: uuid }
+                firstName: { type: string }
+                lastName: { type: string }
+                role: { type: string }
+                isPrimary: { type: boolean }
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:companies:write
+    delete:
+      tags: [Companies]
+      summary: Remove company-person link
+      operationId: removeCompanyPerson
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [personId]
+              properties:
+                personId: { type: string, format: uuid }
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:companies:write
+
+  /companies/{companyId}/comms:
+    post:
+      tags: [Companies]
+      summary: Link a comm to a company (or create comm and link)
+      operationId: addCompanyComm
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commId: { type: string, format: uuid }
+                type: { type: string, enum: [email, phone, linkedin, slack, whatsapp, other] }
+                value: {}
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:companies:write
+    delete:
+      tags: [Companies]
+      summary: Remove company-comm link
+      operationId: removeCompanyComm
+      security:
+        - SessionAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantSlug"
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commId]
+              properties:
+                commId: { type: string, format: uuid }
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      x-scope: comms:companies:write
+
+components:
+  securitySchemes:
+    SessionAuth:
+      type: apiKey
+      in: cookie
+      name: sb-access-token
+      description: Session cookie from Supabase auth (browser login)
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: |
+        API key (tenant-scoped). Alternatively use Authorization Bearer &lt;key&gt;.
+        Only tenant owners can create API keys. Scopes limit which endpoints the key can call.
+  parameters:
+    TenantSlug:
+      name: X-Tenant-Slug
+      in: header
+      required: true
+      schema: { type: string }
+      description: Tenant slug (or pass tenantSlug as query param)
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean, const: true }
+        data: {}
+        error: { type: string }
+    SuccessData:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data: { description: Response payload }
+    SuccessPeopleList:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data: { type: array, items: { $ref: "#/components/schemas/Person" } }
+    SuccessCompaniesList:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data: { type: array, items: { $ref: "#/components/schemas/Company" } }
+    Person:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        firstName: { type: string }
+        lastName: { type: string }
+        bio: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Company:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        name: { type: string }
+        logoUrl: { type: string }
+        description: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+  responses:
+    BadRequest:
+      description: Bad request or validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean, const: false }
+              error: { type: string }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean, const: false }
+              error: { type: string }
+    Forbidden:
+      description: Forbidden (e.g. insufficient scope or key not valid for tenant)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean, const: false }
+              error: { type: string }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean, const: false }
+              error: { type: string }
+    Success:
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean, const: true }
+              data: {}

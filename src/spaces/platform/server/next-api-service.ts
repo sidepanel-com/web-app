@@ -1,15 +1,17 @@
 // lib/apiService.ts
 
-import { NextApiRequest, NextApiResponse } from "next";
-import { ZodType, ZodError } from "zod";
+import type { NextApiRequest, NextApiResponse } from "next";
+import { type ZodType, ZodError } from "zod";
 import { createServerClient } from "@/spaces/identity/supabase.server-api";
 import { danger_supabaseAdmin } from "@/spaces/identity/supabase.server-admin";
 import { ApiError } from "./next-api-errors";
-import { db, DrizzleClient } from "./db";
+import type { DrizzleClient } from "./db";
+import { db } from "./db";
 
-import { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 // import { UserTenantsService } from "./user-tenants.service"; // Removed unused import
 import { TenantService } from "./tenant.service";
+import type { Tenant } from "@db/platform/types";
 
 // Response types
 type ApiResponse<T = any> = {
@@ -21,7 +23,7 @@ type ApiResponse<T = any> = {
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-type ApiUser = {
+export type ApiUser = {
   id: string;
   email: string;
   name: string;
@@ -44,7 +46,7 @@ type Handler<Data> = (utils: ApiUtilities<Data>) => Promise<any>;
 
 // map of method → handler
 export type ApiHandlers<
-  SchemaMap extends Partial<Record<HttpMethod, ZodType<any>>>
+  SchemaMap extends Partial<Record<HttpMethod, ZodType<any>>>,
 > = {
   [M in HttpMethod]?: Handler<SchemaMap[M] extends ZodType<infer T> ? T : any>;
 };
@@ -86,7 +88,7 @@ type UserHandler<Data> = (utils: UserApiUtilities<Data>) => Promise<any>;
 
 // Tenant-scoped handlers map
 export type TenantApiHandlers<
-  SchemaMap extends Partial<Record<HttpMethod, ZodType<any>>>
+  SchemaMap extends Partial<Record<HttpMethod, ZodType<any>>>,
 > = {
   [M in HttpMethod]?: TenantHandler<
     SchemaMap[M] extends ZodType<infer T> ? T : any
@@ -95,7 +97,7 @@ export type TenantApiHandlers<
 
 // User-level handlers map
 export type UserApiHandlers<
-  SchemaMap extends Partial<Record<HttpMethod, ZodType<any>>>
+  SchemaMap extends Partial<Record<HttpMethod, ZodType<any>>>,
 > = {
   [M in HttpMethod]?: UserHandler<
     SchemaMap[M] extends ZodType<infer T> ? T : any
@@ -103,11 +105,14 @@ export type UserApiHandlers<
 };
 
 export class ApiService<SM extends SchemaMap> {
-  constructor(private handlers: ApiHandlers<SM>, protected schemas?: SM) {}
+  constructor(
+    private handlers: ApiHandlers<SM>,
+    protected schemas?: SM,
+  ) {}
 
   public async run(
     req: NextApiRequest,
-    res: NextApiResponse<ApiResponse<any>>
+    res: NextApiResponse<ApiResponse<any>>,
   ) {
     console.log(
       "Running API service",
@@ -115,7 +120,7 @@ export class ApiService<SM extends SchemaMap> {
       req.url,
       req.body,
       req.query,
-      req.headers
+      req.headers,
     );
     try {
       // init supabase + utils
@@ -216,7 +221,10 @@ export class ApiService<SM extends SchemaMap> {
  * API Service for user-level endpoints (tenants list, user settings, etc.)
  */
 export class UserApiService<SM extends SchemaMap> extends ApiService<SM> {
-  constructor(private userHandlers: UserApiHandlers<SM>, schemas?: SM) {
+  constructor(
+    private userHandlers: UserApiHandlers<SM>,
+    schemas?: SM,
+  ) {
     // Convert user handlers to regular handlers for the parent class
     const regularHandlers: ApiHandlers<SM> = {};
     Object.entries(userHandlers).forEach(([method, handler]) => {
@@ -227,7 +235,7 @@ export class UserApiService<SM extends SchemaMap> extends ApiService<SM> {
 
   public async run(
     req: NextApiRequest,
-    res: NextApiResponse<ApiResponse<any>>
+    res: NextApiResponse<ApiResponse<any>>,
   ) {
     try {
       const supabaseClient = createServerClient(req, res);
@@ -334,7 +342,7 @@ export class PathTenantApiService<SM extends SchemaMap> extends ApiService<SM> {
     private options: {
       paramName?: string; // Default: 'tenantSlug'
       lookupBy?: "slug" | "id"; // Default: 'slug'
-    } = {}
+    } = {},
   ) {
     // Convert tenant handlers to regular handlers for the parent class
     const regularHandlers: ApiHandlers<SM> = {};
@@ -346,7 +354,7 @@ export class PathTenantApiService<SM extends SchemaMap> extends ApiService<SM> {
 
   public async run(
     req: NextApiRequest,
-    res: NextApiResponse<ApiResponse<any>>
+    res: NextApiResponse<ApiResponse<any>>,
   ) {
     try {
       const paramName = this.options.paramName || "tenantSlug";
@@ -386,11 +394,8 @@ export class PathTenantApiService<SM extends SchemaMap> extends ApiService<SM> {
       }
 
       // Look up tenant and get tenant ID
-      const tenantService = TenantService.create(
-        db,
-        apiUser.id
-      );
-      let tenant;
+      const tenantService = TenantService.create(db, apiUser.id);
+      let tenant: Tenant | null;
       let tenantId: string;
       let tenantSlug: string;
 
