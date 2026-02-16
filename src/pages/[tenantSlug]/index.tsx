@@ -4,7 +4,9 @@ import { createClient } from "@/spaces/identity/supabase.server-props";
 import { AppPage } from "@/spaces/platform/ui/layout/app-page";
 import { MobileDevice } from "@/spaces/product/ui/mobile-device";
 
-export default function AppDashboardPage() {
+type Props = { siteOrigin: string };
+
+export default function AppDashboardPage({ siteOrigin }: Props) {
   const router = useRouter();
   const tenantSlug = router.query.tenantSlug as string;
 
@@ -12,8 +14,11 @@ export default function AppDashboardPage() {
     <AppPage>
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <MobileDevice>
-          <iframe src={`${process.env.NEXT_PUBLIC_SITE_URL}/${tenantSlug}/wrapped`}
-            title="Wrapped App" className="w-full h-full" />
+          <iframe
+            src={`${siteOrigin}/${tenantSlug}/wrapped`}
+            title="Wrapped App"
+            className="w-full h-full"
+          />
         </MobileDevice>
       </div>
     </AppPage>
@@ -23,7 +28,7 @@ export default function AppDashboardPage() {
 // Mark this page as requiring a tenant
 AppDashboardPage.requiresTenant = true;
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const supabase = createClient(ctx);
   const {
     data: { session },
@@ -38,8 +43,13 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     };
   }
 
+  const host = ctx.req.headers.host ?? "localhost:3000";
+  const proto =
+    ctx.req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+  const siteOrigin = `${proto}://${host}`;
+
   return {
-    props: {},
+    props: { siteOrigin },
   };
 };
 
