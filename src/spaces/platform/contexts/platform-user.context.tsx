@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { useAuth } from "@/spaces/identity/identity-auth.context";
@@ -54,44 +55,38 @@ export function PlatformUserProvider({
     null,
   );
 
-  // Initialize SDK when session is available
+  const lastTokenRef = useRef<string | null>(null);
+
   useEffect(() => {
-    const initUserSdk = async () => {
-      if (!session?.access_token) {
-        setUserSdk(null);
-        setAvailableTenants([]);
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
+    const token = session?.access_token ?? null;
+    if (token === lastTokenRef.current) return;
+    lastTokenRef.current = token;
 
-      try {
-        const _userSdk = createUserClientSDK({
-          baseUrl: process.env.NEXT_PUBLIC_API_URL || "",
-          accessToken: session.access_token,
-        });
-        setUserSdk(_userSdk);
+    if (!token) {
+      setUserSdk(null);
+      setAvailableTenants([]);
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
 
-        // Populate user from session
-        if (session.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || "",
-            // Add other fields as needed from session user_metadata
-            displayName:
-              session.user.user_metadata?.full_name || session.user.email,
-          });
-        }
+    const _userSdk = createUserClientSDK({
+      baseUrl: process.env.NEXT_PUBLIC_API_URL || "",
+      accessToken: token,
+    });
+    setUserSdk(_userSdk);
 
-        setError(null);
-      } catch (err) {
-        setError(err as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (session?.user) {
+      setUser({
+        id: session.user.id,
+        email: session.user.email || "",
+        displayName:
+          session.user.user_metadata?.full_name || session.user.email,
+      });
+    }
 
-    initUserSdk();
+    setError(null);
+    setIsLoading(false);
   }, [session]);
 
   // Load available tenants when SDK is ready

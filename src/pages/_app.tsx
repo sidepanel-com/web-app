@@ -15,27 +15,19 @@ import "@/styles/globals.css";
 
 const DEBUG_MODE = true;
 
-function AppGuard({
-  children,
-  isPublic,
-}: {
-  children: React.ReactNode;
-  isPublic: boolean;
-}) {
+function AppGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { session, isLoading } = useAuth();
 
   if (DEBUG_MODE) {
-    console.log("DEBUG_MODE: isPublic", isPublic);
     console.log("DEBUG_MODE: isLoading", isLoading);
     console.log("DEBUG_MODE: session", session);
   }
-  if (!isPublic) {
-    if (isLoading) return null;
-    if (!session) {
-      router.replace("/auth/login");
-      return null;
-    }
+
+  if (isLoading) return null;
+  if (!session) {
+    router.replace("/auth/login");
+    return null;
   }
 
   return <>{children}</>;
@@ -73,11 +65,15 @@ export default function App(props: AppProps) {
       disableTransitionOnChange
     >
       <IdentityAuthProvider>
-        <PlatformUserProvider>
-          <AppGuard isPublic={isPublic}>
-            <TenantBoundary {...props} />
+        {isPublic ? (
+          <props.Component {...props.pageProps} />
+        ) : (
+          <AppGuard>
+            <PlatformUserProvider>
+              <TenantBoundary {...props} />
+            </PlatformUserProvider>
           </AppGuard>
-        </PlatformUserProvider>
+        )}
       </IdentityAuthProvider>
     </BrandingThemeProvider>
   );
