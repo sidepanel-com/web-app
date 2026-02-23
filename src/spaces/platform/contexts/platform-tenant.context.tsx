@@ -6,6 +6,7 @@ import type { TenantClientSDK } from "@/spaces/platform/client-sdk";
 import type { Tenant } from "@db/platform/types";
 import { useAuth } from "@/spaces/identity/identity-auth.context";
 import { usePlatformUser } from "@/spaces/platform/contexts/platform-user.context";
+import { saveLastTenantSlug } from "@/spaces/platform/ui/nav-helpers";
 
 interface TenantContextType {
   tenant: Tenant | null;
@@ -60,6 +61,7 @@ export function PlatformTenantProvider({
         const data = await res.json();
         if (!cancelled) {
           setTenant(data.data);
+          saveLastTenantSlug(tenantSlug);
 
           if (session?.access_token) {
             const sdk = createTenantClientSDK(

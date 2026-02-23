@@ -2,6 +2,21 @@
  * Navigation utilities for handling page transitions
  */
 
+const LAST_TENANT_KEY = "lastTenantSlug";
+
+export function saveLastTenantSlug(slug: string): void {
+  if (isBrowser()) {
+    localStorage.setItem(LAST_TENANT_KEY, slug);
+  }
+}
+
+export function getLastTenantSlug(): string | null {
+  if (isBrowser()) {
+    return localStorage.getItem(LAST_TENANT_KEY);
+  }
+  return null;
+}
+
 export function navigateToHome(): void {
   navigateWithFullPageTransition("/");
 }
@@ -22,6 +37,7 @@ export function navigateWithFullPageTransition(url: string): void {
  * @param tenantSlug - The tenant slug to navigate to
  */
 export function navigateToTenantDashboard(tenantSlug: string): void {
+  saveLastTenantSlug(tenantSlug);
   navigateWithFullPageTransition(`/${tenantSlug}/`);
 }
 

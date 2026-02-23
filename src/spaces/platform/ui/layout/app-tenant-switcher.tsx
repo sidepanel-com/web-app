@@ -25,6 +25,7 @@ import { TenantCreateForm } from "@/spaces/platform/ui/tenant/tenant-create-form
 
 import { usePlatformUser } from "@/spaces/platform/contexts/platform-user.context";
 import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
+import { saveLastTenantSlug } from "@/spaces/platform/ui/nav-helpers";
 import type { Tenant } from "@db/platform/types";
 
 export function AppTenantSwitcher() {
@@ -66,6 +67,7 @@ export function AppTenantSwitcher() {
                   key={tenant.slug}
                   asChild
                   className="gap-2 p-2"
+                  onClick={() => saveLastTenantSlug(tenant.slug)}
                 >
                   <Link href={`/${tenant.slug}/`}>
                     {tenant.name}
