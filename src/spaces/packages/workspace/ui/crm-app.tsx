@@ -1,11 +1,83 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui-primitives/ui/tabs";
-import { Home, Users, Building2, MessageSquare } from "lucide-react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/ui-primitives/ui/tabs";
+import { Avatar, AvatarFallback } from "@/ui-primitives/ui/avatar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/ui-primitives/ui/popover";
+import { Button } from "@/ui-primitives/ui/button";
+import { Separator } from "@/ui-primitives/ui/separator";
+import { Home, Users, Building2, MessageSquare, LogOut } from "lucide-react";
+import { useRouter } from "next/router";
+import { usePlatformUser } from "@/spaces/platform/contexts/platform-user.context";
+import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
+import { useAuth } from "@/spaces/identity/identity-auth.context";
 import { PeopleView } from "./people/people-view";
 import { CompaniesView } from "./companies/companies-view";
 
 export function CrmApp() {
+  const { user } = usePlatformUser();
+  const { tenant } = usePlatformTenant();
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const displayName = user?.displayName || user?.email || "";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/auth/login");
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
+      <div className="flex items-center justify-between px-4 py-2 border-b">
+        <span className="text-sm font-semibold truncate">
+          {tenant?.name || "SidePanel"}
+        </span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+              </Avatar>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 p-0">
+            <div className="p-3">
+              <p className="text-sm font-medium truncate">{displayName}</p>
+              {user?.email && displayName !== user.email && (
+                <p className="text-xs text-muted-foreground truncate">
+                  {user.email}
+                </p>
+              )}
+            </div>
+            <Separator />
+            <div className="p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Log out
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
       <Tabs defaultValue="home" className="flex flex-col h-full">
         <div className="border-b bg-muted/50 sticky top-0 z-10">
           <TabsList className="w-full flex h-auto bg-transparent border-none p-0 rounded-none">

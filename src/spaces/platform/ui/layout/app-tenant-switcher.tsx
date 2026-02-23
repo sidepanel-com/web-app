@@ -20,6 +20,7 @@ import {
   useSidebar,
 } from "@/ui-primitives/ui/sidebar";
 import { Dialog, DialogContent } from "@/ui-primitives/ui/dialog";
+import { Skeleton } from "@/ui-primitives/ui/skeleton";
 
 import { TenantCreateForm } from "@/spaces/platform/ui/tenant/tenant-create-form";
 
@@ -31,7 +32,7 @@ import type { Tenant } from "@db/platform/types";
 export function AppTenantSwitcher() {
   const { isMobile } = useSidebar();
   const { availableTenants } = usePlatformUser();
-  const { tenant } = usePlatformTenant();
+  const { tenant, isLoading } = usePlatformTenant();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   return (
@@ -44,12 +45,19 @@ export function AppTenantSwitcher() {
                 size="lg"
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{tenant?.name}</span>
-                  <span className="truncate text-xs">
-                    {tenant ? tenant.subscriptionTier : "unknown"}
-                  </span>
-                </div>
+                {isLoading ? (
+                  <div className="grid flex-1 gap-1">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                ) : (
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{tenant?.name}</span>
+                    <span className="truncate text-xs">
+                      {tenant?.subscriptionTier}
+                    </span>
+                  </div>
+                )}
                 <ChevronsUpDown className="ml-auto" />
               </SidebarMenuButton>
             </DropdownMenuTrigger>

@@ -1,26 +1,30 @@
-import { Smartphone, Server } from "lucide-react";
+import { Eye, LayoutGrid, Shield } from "lucide-react";
 import type { NavSection } from "@/spaces/platform/ui/nav-types";
 
-/**
- * Product-specific navigation sections.
- * The product team can contribute new menu items here without touching platform directories.
- */
-export const productNavigation: NavSection[] = [
+export const appNavigation: NavSection[] = [
   {
-    title: "Product",
+    title: "App",
     items: [
       {
-        title: "App",
+        title: "Preview",
         url: "/",
-        icon: Smartphone,
+        icon: Eye,
       },
       {
-        title: "API",
-        url: "/api",
-        icon: Server,
+        title: "Manage",
+        icon: LayoutGrid,
+        url: "#",
+        items: [
+          {
+            title: "API",
+            url: "/api",
+          },
+          { title: "Org Units", url: "/permissions/org-units" },
+          { title: "Members", url: "/permissions/members" },
+        ],
       },
+
     ],
   },
-
 ];
 

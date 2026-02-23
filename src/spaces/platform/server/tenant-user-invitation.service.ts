@@ -326,7 +326,6 @@ export class TenantUserInvitationService extends BaseEntityService {
       invitedBy: invitation.invitedBy,
       invitedByEmail: invitation.invitedByEmail,
       status: "active",
-      // createdAt default
     });
 
     // Update invitation status

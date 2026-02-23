@@ -1,7 +1,7 @@
 "use client";
 
 import type * as React from "react";
-import { Plug2, Settings } from "lucide-react";
+import { Plug2, Settings, Shield } from "lucide-react";
 
 import { AppNavSection } from "./app-nav-section";
 import { AppTenantSwitcher } from "./app-tenant-switcher";
@@ -13,9 +13,8 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/ui-primitives/ui/sidebar";
-import { productNavigation } from "@/spaces/packages/workspace/navigation";
+import { appNavigation } from "@/spaces/packages/workspace/navigation";
 
-// This is sample data.
 const data = {
   navItems: [
     {
@@ -23,6 +22,7 @@ const data = {
       url: "/connections",
       icon: Plug2,
     },
+
     {
       title: "Settings",
       url: "#",
@@ -35,6 +35,14 @@ const data = {
         {
           title: "Team",
           url: "/settings/users",
+        },
+        {
+          title: "Packages",
+          url: "/settings/packages",
+        },
+        {
+          title: "API Keys",
+          url: "/settings/api-keys",
         },
         {
           title: "Billing",
@@ -56,7 +64,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <AppTenantSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        {productNavigation.map((section) => (
+        {appNavigation.map((section) => (
           <AppNavSection
             key={section.title}
             title={section.title}
