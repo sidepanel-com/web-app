@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from "next";
 import { createClient } from "@/spaces/identity/supabase.server-props";
 import { AppPage } from "@/spaces/platform/ui/layout/app-page";
-import { ApiKeysSettings } from "@/spaces/product/ui/api-keys-settings";
+import { ApiKeysSettings } from "@/spaces/packages/workspace/ui/api-keys-settings";
 
 export default function ApiKeysSettingsPage() {
   return (

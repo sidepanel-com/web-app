@@ -2,8 +2,12 @@ import type { Config } from "drizzle-kit";
 
 export default {
   schema: [
-    "./db/product/schema.ts",
-    "./db/product/relations.ts",
+    "./db/ledger/schema.ts",
+    "./db/ledger/relations.ts",
+    "./db/permissions/schema.ts",
+    "./db/permissions/relations.ts",
+    "./db/packages/schema.ts",
+    "./db/packages/relations.ts",
     "./db/platform/schema.ts",
     "./db/platform/relations.ts",
     "./db/integrations/schema.ts",

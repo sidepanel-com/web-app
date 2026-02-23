@@ -20,11 +20,11 @@ The canonical record of real-world communications and identities. The foundation
 
 ## Comm
 
-A normalized communication identity record. Represents an email address, phone number, LinkedIn profile, or other communication method.
+The atomic unit of identity in SidePanel. A normalized communication record representing a single communication method (email address, phone number, LinkedIn profile, etc.). A comm may map to one person, multiple people (shared inbox), or temporarily none.
 
 ## Activity
 
-A chronological event entry referencing reality. Two types: Communication Activity (linked to a comm) and Operational Activity (an internal system or user action).
+A chronological event entry in the unified `activities` table. Each activity has a `type` and a `sourceId` linking to its domain table (email, meeting, call, message). Two categories: Communication Activity (linked via `actorCommId`) and Operational Activity (linked via `actorPersonId`).
 
 ## Temporal
 
@@ -69,3 +69,15 @@ Workflow or contextual interpretation applied by a package. Examples: opportunit
 ## Mutation Discipline
 
 The principle that ledger history is not silently rewritten. Temporal rows are closed, not overwritten. Corrections are explicit and auditable.
+
+## Member Profile
+
+Permission-layer identity. Maps 1:1 to a `platform.tenant_users` record. All projection assignment and scope resolution uses member profiles, not tenant users directly.
+
+## Org Unit
+
+A tenant-scoped hierarchical grouping (department, team, division). Org units form a tree via `parentOrgUnitId` and use a materialized `path` for fast subtree filtering.
+
+## Scope Resolver
+
+A deterministic function that each projection package implements to convert member context (tenant, member profile, roles, org unit IDs, org unit paths) into database query constraints. No projection query executes without scope resolution.

@@ -3,8 +3,12 @@ import postgres from "postgres";
 
 import * as platformSchema from "@db/platform/schema";
 import * as platformRelations from "@db/platform/relations";
-import * as productSchema from "@db/product/schema";
-import * as productRelations from "@db/product/relations";
+import * as ledgerSchema from "@db/ledger/schema";
+import * as ledgerRelations from "@db/ledger/relations";
+import * as permissionsSchema from "@db/permissions/schema";
+import * as permissionsRelations from "@db/permissions/relations";
+import * as packagesSchema from "@db/packages/schema";
+import * as packagesRelations from "@db/packages/relations";
 import * as integrationsSchema from "@db/integrations/schema";
 import * as integrationsRelations from "@db/integrations/relations";
 
@@ -22,8 +26,12 @@ export const db = drizzle(client, {
   schema: {
     ...platformSchema,
     ...platformRelations,
-    ...productSchema,
-    ...productRelations,
+    ...ledgerSchema,
+    ...ledgerRelations,
+    ...permissionsSchema,
+    ...permissionsRelations,
+    ...packagesSchema,
+    ...packagesRelations,
     ...integrationsSchema,
     ...integrationsRelations,
   },

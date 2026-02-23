@@ -2,7 +2,7 @@
 
 This directory covers system-level architecture, terminology, and structural constraints.
 
-Code-level patterns and usage live in local READMEs (e.g., `src/spaces/product/README.md`, `db/ledger/README.md`). Do not duplicate code-level content here.
+Code-level patterns and usage live in local READMEs (e.g., `src/spaces/packages/workspace/README.md`, `db/ledger/README.md`). Do not duplicate code-level content here.
 
 ---
 

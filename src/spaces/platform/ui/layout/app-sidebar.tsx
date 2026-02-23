@@ -13,7 +13,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/ui-primitives/ui/sidebar";
-import { productNavigation } from "@/spaces/product/navigation";
+import { productNavigation } from "@/spaces/packages/workspace/navigation";
 
 // This is sample data.
 const data = {

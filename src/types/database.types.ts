@@ -1,6 +1,8 @@
-import { InferSelectModel, InferInsertModel } from "drizzle-orm";
+import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
 import * as platformSchema from "@db/platform/schema";
-import * as productSchema from "@db/product/schema";
+import * as ledgerSchema from "@db/ledger/schema";
+import * as permissionsSchema from "@db/permissions/schema";
+import * as packagesSchema from "@db/packages/schema";
 
 /**
  * This file provides compatibility helpers for the Tables<"table_name"> pattern
@@ -14,23 +16,33 @@ const allTables = {
   user_profiles: platformSchema.userProfiles,
   tenant_invitations: platformSchema.tenantInvitations,
 
-  // Product tables
-  people: productSchema.people,
-  companies: productSchema.companies,
-  company_domains: productSchema.companyDomains,
-  company_websites: productSchema.companyWebsites,
-  people_companies: productSchema.peopleCompanies,
-  comms: productSchema.comms,
-  comms_people: productSchema.commsPeople,
-  comms_companies: productSchema.commsCompanies,
-  emails: productSchema.emails,
-  email_comms: productSchema.emailComms,
-  meetings: productSchema.meetings,
-  meetings_comms: productSchema.meetingsComms,
-  calls: productSchema.calls,
-  call_comms: productSchema.callComms,
-  messages: productSchema.messages,
-  message_comms: productSchema.messageComms,
+  // Ledger tables
+  people: ledgerSchema.people,
+  companies: ledgerSchema.companies,
+  company_domains: ledgerSchema.companyDomains,
+  company_websites: ledgerSchema.companyWebsites,
+  people_companies: ledgerSchema.peopleCompanies,
+  comms: ledgerSchema.comms,
+  comms_people: ledgerSchema.commsPeople,
+  comms_companies: ledgerSchema.commsCompanies,
+  emails: ledgerSchema.emails,
+  email_comms: ledgerSchema.emailComms,
+  meetings: ledgerSchema.meetings,
+  meetings_comms: ledgerSchema.meetingsComms,
+  calls: ledgerSchema.calls,
+  call_comms: ledgerSchema.callComms,
+  messages: ledgerSchema.messages,
+  message_comms: ledgerSchema.messageComms,
+  activities: ledgerSchema.activities,
+
+  // Permissions tables
+  member_profiles: permissionsSchema.memberProfiles,
+  org_units: permissionsSchema.orgUnits,
+  member_profile_org_units: permissionsSchema.memberProfileOrgUnits,
+
+  // Packages tables
+  workspace_threads: packagesSchema.workspaceThreads,
+  workspace_thread_assignments: packagesSchema.workspaceThreadAssignments,
 };
 
 export type TableName = keyof typeof allTables;
@@ -55,5 +67,7 @@ interface EnumsMap {
   tenant_user_status: (typeof platformSchema.tenantUserStatus.enumValues)[number];
   user_role: (typeof platformSchema.tenantUserRole.enumValues)[number];
   user_status: (typeof platformSchema.tenantUserStatus.enumValues)[number];
-  comm_type: (typeof productSchema.commType.enumValues)[number];
+  comm_type: (typeof ledgerSchema.commType.enumValues)[number];
+  activity_type: (typeof ledgerSchema.activityType.enumValues)[number];
+  access_level: (typeof ledgerSchema.accessLevel.enumValues)[number];
 }

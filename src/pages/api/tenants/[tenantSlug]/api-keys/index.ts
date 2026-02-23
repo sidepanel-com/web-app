@@ -9,7 +9,7 @@ import { TenantService } from "@/spaces/platform/server/tenant.service";
 import { ApiKeyService } from "@/spaces/platform/server/api-key.service";
 import { userProfiles } from "@db/platform/schema";
 import { eq } from "drizzle-orm";
-import { COMMS_SCOPES_FULL } from "@/spaces/product/server/scopes";
+import { COMMS_SCOPES_FULL } from "@/spaces/packages/workspace/server/scopes";
 
 const schemas = {
   GET: z.object({}),

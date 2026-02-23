@@ -3,8 +3,8 @@ import { z } from "zod";
 import {
   V1ApiService,
   V1ApiHandlers,
-} from "@/spaces/product/server/v1-api-service";
-import { PeopleService } from "@/spaces/product/server/people.service";
+} from "@/spaces/packages/workspace/server/v1-api-service";
+import { PeopleService } from "@/spaces/packages/workspace/server/people.service";
 
 const schemas = {
   POST: z.object({

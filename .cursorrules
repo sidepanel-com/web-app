@@ -12,22 +12,26 @@ The project is strictly divided into **Platform** and **Product** spaces. See `d
 - **DO NOT MODIFY** files in these directories unless explicitly instructed.
 - If you need a platform-level change, suggest it rather than implementing it.
 
-### 2. The Product Space (`src/spaces/product/`)
+### 2. Packages (`src/spaces/packages/`)
 
-- This is your primary area of contribution for UI, hooks, and services.
-- Follow the patterns established in `src/spaces/product/README.md`.
+- UI, hooks, and services are organized by package.
+- **Workspace** (`src/spaces/packages/workspace/`) is the core projection of ledger data.
+- Future packages (sales, projects, etc.) get their own directories here.
+- Follow the patterns established in each package's README.
 
 ### 3. Database Schemas (Drizzle + Supabase)
 
-The product database is split into two schemas:
+The product database is split into three schemas:
 
 - **Ledger** (`db/ledger/`) — Canonical reality: people, companies, comms, activities. Immutable record of what happened.
-- **Packages** (`db/packages/`) — Business interpretations: projections, workflow state, package-specific tables.
+- **Permissions** (`db/permissions/`) — Permission infrastructure: member profiles (1:1 with tenant users), org units (hierarchical grouping), member-org-unit mappings. No ledger data, no business logic.
+- **Packages** (`db/packages/`) — Business interpretations: projections, workflow state, package-specific tables. Assignment columns (`ownerMemberProfileId`, `ownerOrgUnitId`) belong here.
 
 Rules:
 
-- Every table in both schemas **MUST** have a `tenant_id` column and foreign key to `platform.tenants`.
-- Ledger tables must not contain business workflow state, CRM concepts, or package logic.
+- Every table in all schemas **MUST** have a `tenant_id` column and foreign key to `platform.tenants`.
+- Ledger tables must not contain business workflow state, CRM concepts, package logic, or assignment columns.
+- Permission tables must not contain ledger data or business workflow state.
 - Package tables must not duplicate or redefine canonical ledger data.
 - Use `npm run db:generate` to create migrations.
 
@@ -35,7 +39,7 @@ Rules:
 
 - Use `@/ui-primitives/ui/*` for base components (Shadcn UI).
 - Wrap all tenant-specific pages in `src/pages/[tenantSlug]/` with the `<AppPage>` component.
-- Add new navigation items to `src/spaces/product/navigation.tsx`.
+- Add new navigation items to `src/spaces/packages/workspace/navigation.tsx`.
 
 ## Coding Standards
 

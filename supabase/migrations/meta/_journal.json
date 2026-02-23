@@ -5,64 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1767456579176,
-      "tag": "0000_flaky_the_santerians",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1767481221504,
-      "tag": "0001_wonderful_swordsman",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1767546530529,
-      "tag": "0002_faithful_red_shift",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1767563066198,
-      "tag": "0003_daily_victor_mancha",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1767612757066,
-      "tag": "0004_chemical_satana",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1767612856402,
-      "tag": "0005_mushy_wasp",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1767717941687,
-      "tag": "0006_brief_brood",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1767813173593,
-      "tag": "0007_narrow_junta",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1771281452270,
-      "tag": "0008_right_captain_cross",
+      "when": 1771855266346,
+      "tag": "0000_supreme_sister_grimm",
       "breakpoints": true
     }
   ]

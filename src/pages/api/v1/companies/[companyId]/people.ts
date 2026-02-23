@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
-import { V1ApiService, V1ApiHandlers } from "@/spaces/product/server/v1-api-service";
-import { CompaniesService } from "@/spaces/product/server/companies.service";
+import { V1ApiService, V1ApiHandlers } from "@/spaces/packages/workspace/server/v1-api-service";
+import { CompaniesService } from "@/spaces/packages/workspace/server/companies.service";
 
 const schemas = {
   POST: z.object({

@@ -1,1 +1,0 @@
-ALTER TABLE "product"."companies" DROP COLUMN "domain";

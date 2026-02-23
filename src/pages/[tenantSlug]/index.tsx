@@ -2,7 +2,7 @@ import type { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import { createClient } from "@/spaces/identity/supabase.server-props";
 import { AppPage } from "@/spaces/platform/ui/layout/app-page";
-import { MobileDevice } from "@/spaces/product/ui/mobile-device";
+import { MobileDevice } from "@/spaces/packages/workspace/ui/mobile-device";
 
 type Props = { siteOrigin: string };
 
