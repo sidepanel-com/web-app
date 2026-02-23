@@ -4,7 +4,7 @@ You are working on a multi-tenant platform built with Next.js, Drizzle ORM, and 
 
 ## Architecture: Spaces and Schemas
 
-The project is strictly divided into **Platform** and **Product** spaces.
+The project is strictly divided into **Platform** and **Product** spaces. See `docs/architecture.md` for the full layer model.
 
 ### 1. The Platform Space (`src/spaces/platform/`, `db/platform/`)
 
@@ -12,16 +12,23 @@ The project is strictly divided into **Platform** and **Product** spaces.
 - **DO NOT MODIFY** files in these directories unless explicitly instructed.
 - If you need a platform-level change, suggest it rather than implementing it.
 
-### 2. The Product Space (`src/spaces/product/`, `db/product/`)
+### 2. The Product Space (`src/spaces/product/`)
 
-- This is your primary area of contribution.
-- Add new features, UI components, hooks, and database tables here.
-- Follow the patterns established in `src/spaces/product/README.md` and `db/product/README.md`.
+- This is your primary area of contribution for UI, hooks, and services.
+- Follow the patterns established in `src/spaces/product/README.md`.
 
-## Database Guidelines (Drizzle + Supabase)
+### 3. Database Schemas (Drizzle + Supabase)
 
-- All new tables must go into the `product` schema in `db/product/schema.ts`.
-- Every product table **MUST** have a `tenant_id` column and foreign key to `platform.tenants`.
+The product database is split into two schemas:
+
+- **Ledger** (`db/ledger/`) — Canonical reality: people, companies, comms, activities. Immutable record of what happened.
+- **Packages** (`db/packages/`) — Business interpretations: projections, workflow state, package-specific tables.
+
+Rules:
+
+- Every table in both schemas **MUST** have a `tenant_id` column and foreign key to `platform.tenants`.
+- Ledger tables must not contain business workflow state, CRM concepts, or package logic.
+- Package tables must not duplicate or redefine canonical ledger data.
 - Use `npm run db:generate` to create migrations.
 
 ## UI Guidelines

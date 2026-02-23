@@ -1,0 +1,15 @@
+---
+description: Rules for creating and editing documentation files
+globs: docs/**
+alwaysApply: false
+---
+
+# Documentation Rules
+
+Before creating or modifying files in `/docs`, read `docs/README.md` for the writing rules and file structure.
+
+- Each file has one role. Do not mix architecture with term definitions or constraints with orientation.
+- Do not duplicate content across docs files. Reference with relative markdown links instead.
+- `/docs` covers system-level architecture. Code-local READMEs (`src/spaces/*/README.md`, `db/*/README.md`) cover implementation patterns. Do not duplicate code-level content in `/docs`.
+- Glossary definitions must be neutral. No rules or constraints in glossary entries.
+- Delete outdated content before adding new content.
