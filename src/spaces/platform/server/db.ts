@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-
+import "server-only";
 import * as platformSchema from "@db/platform/schema";
 import * as platformRelations from "@db/platform/relations";
 import * as ledgerSchema from "@db/ledger/schema";

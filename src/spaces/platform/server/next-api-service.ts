@@ -1,5 +1,6 @@
 // lib/apiService.ts
 
+import "server-only";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { type ZodType, ZodError } from "zod";
 import { createServerClient } from "@/spaces/identity/supabase.server-api";
