@@ -9,6 +9,9 @@ export interface PermissionContext {
   tenantId?: string;
   userRole?: UserRole;
   customPermissions?: Record<string, any>;
+  memberProfileId?: string;
+  orgUnitIds?: string[];
+  orgUnitPaths?: string[];
 }
 
 // Base service class that all entity services will extend

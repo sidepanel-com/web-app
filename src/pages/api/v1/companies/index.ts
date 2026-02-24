@@ -33,22 +33,28 @@ const schemas = {
 };
 
 const handlers: V1ApiHandlers<typeof schemas> = {
-  GET: async ({ db, apiUser, tenantId, userRole }) => {
+  GET: async ({ db, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const companiesService = CompaniesService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     return await companiesService.getCompanies();
   },
-  POST: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  POST: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const companiesService = CompaniesService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     return await companiesService.createCompany(requestData);

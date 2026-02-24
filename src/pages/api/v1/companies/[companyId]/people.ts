@@ -19,8 +19,8 @@ const schemas = {
 };
 
 const handlers: V1ApiHandlers<typeof schemas> = {
-  POST: async ({ db, requestData, apiUser, tenantId, userRole }) => {
-    const companiesService = CompaniesService.create(db, apiUser.supabaseUserId, tenantId, userRole || undefined);
+  POST: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
+    const companiesService = CompaniesService.create(db, apiUser.supabaseUserId, tenantId, userRole || undefined, memberProfileId, orgUnitIds, orgUnitPaths);
     const { companyId, personId, firstName, lastName, role, isPrimary } = requestData;
 
     if (personId) {
@@ -31,8 +31,8 @@ const handlers: V1ApiHandlers<typeof schemas> = {
     }
     throw new Error("Either personId or person names must be provided");
   },
-  DELETE: async ({ db, requestData, apiUser, tenantId, userRole }) => {
-    const companiesService = CompaniesService.create(db, apiUser.supabaseUserId, tenantId, userRole || undefined);
+  DELETE: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
+    const companiesService = CompaniesService.create(db, apiUser.supabaseUserId, tenantId, userRole || undefined, memberProfileId, orgUnitIds, orgUnitPaths);
     await companiesService.removePersonLink(requestData.companyId, requestData.personId);
     return { success: true };
   },

@@ -39,33 +39,42 @@ const schemas = {
 };
 
 const handlers: V1ApiHandlers<typeof schemas> = {
-  GET: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  GET: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const companiesService = CompaniesService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     return await companiesService.getCompanyById(requestData.companyId);
   },
-  PATCH: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  PATCH: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const companiesService = CompaniesService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     const { companyId, ...updates } = requestData;
     return await companiesService.updateCompany(companyId, updates);
   },
-  DELETE: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  DELETE: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const companiesService = CompaniesService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     await companiesService.deleteCompany(requestData.companyId);

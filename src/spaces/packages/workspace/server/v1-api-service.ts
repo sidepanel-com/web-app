@@ -15,6 +15,7 @@ import {
   scopesInclude,
   type V1Scope,
 } from "@/spaces/packages/workspace/server/scopes";
+import { resolveMemberContext } from "@/spaces/packages/workspace/server/member-context";
 
 // Response types
 type ApiResponse<T = unknown> = {
@@ -43,6 +44,9 @@ export interface V1ApiUtilities<Data = unknown> {
   tenantId: string;
   tenantSlug: string;
   userRole: "owner" | "admin" | "member" | "viewer" | null;
+  memberProfileId: string | null;
+  orgUnitIds: string[];
+  orgUnitPaths: string[];
   /** Set when authType is api_key; used for scope checks */
   apiKeyScopes?: string[];
   handleValidationError: (err: ZodError) => void;
@@ -189,6 +193,9 @@ export class V1ApiService<SM extends SchemaMap> {
         }
       }
 
+      // 3. Resolve member context (permission-layer identity)
+      const memberContext = await resolveMemberContext(db, tenant.id, profile.id);
+
       // 4. Parse & Validate Request Data
       let requestData: unknown;
       const schema = this.schemas?.[method];
@@ -213,12 +220,15 @@ export class V1ApiService<SM extends SchemaMap> {
         tenantId: tenant.id,
         tenantSlug: tenant.slug,
         userRole,
+        memberProfileId: memberContext.memberProfileId,
+        orgUnitIds: memberContext.orgUnitIds,
+        orgUnitPaths: memberContext.orgUnitPaths,
         apiKeyScopes,
         handleValidationError: (err: ZodError) =>
           res.status(400).json({ success: false, error: err.message }),
         handleError: (err: Error) => {
           console.error(err);
-          res.status(500).json({ success: false, error: err.message });
+          return res.status(500).json({ success: false, error: err.message });
         },
       };
 

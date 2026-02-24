@@ -22,12 +22,15 @@ const schemas = {
 };
 
 const handlers: V1ApiHandlers<typeof schemas> = {
-  POST: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  POST: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const companiesService = CompaniesService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
     const { companyId, commId, type, value } = requestData;
 
@@ -42,12 +45,15 @@ const handlers: V1ApiHandlers<typeof schemas> = {
     }
     throw new Error("Either commId or comm type/value must be provided");
   },
-  DELETE: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  DELETE: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const companiesService = CompaniesService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
     await companiesService.removeCommLink(
       requestData.companyId,

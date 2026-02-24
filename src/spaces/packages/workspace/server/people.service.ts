@@ -529,12 +529,18 @@ export class PeopleService extends BaseEntityService {
     drizzleClient: typeof db,
     userId: string,
     tenantId: string,
-    userRole?: PermissionContext["userRole"]
+    userRole?: PermissionContext["userRole"],
+    memberProfileId?: string | null,
+    orgUnitIds?: string[],
+    orgUnitPaths?: string[],
   ): PeopleService {
     return new PeopleService(drizzleClient, {
       userId,
       tenantId,
       userRole,
+      memberProfileId: memberProfileId ?? undefined,
+      orgUnitIds,
+      orgUnitPaths,
     });
   }
 }

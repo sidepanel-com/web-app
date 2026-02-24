@@ -656,12 +656,18 @@ export class CompaniesService extends BaseEntityService {
     drizzleClient: typeof db,
     userId: string,
     tenantId: string,
-    userRole?: PermissionContext["userRole"]
+    userRole?: PermissionContext["userRole"],
+    memberProfileId?: string | null,
+    orgUnitIds?: string[],
+    orgUnitPaths?: string[],
   ): CompaniesService {
     return new CompaniesService(drizzleClient, {
       userId,
       tenantId,
       userRole,
+      memberProfileId: memberProfileId ?? undefined,
+      orgUnitIds,
+      orgUnitPaths,
     });
   }
 }

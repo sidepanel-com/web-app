@@ -13,6 +13,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // import { UserTenantsService } from "./user-tenants.service"; // Removed unused import
 import { TenantService } from "./tenant.service";
 import type { Tenant } from "@db/platform/types";
+import { userProfiles } from "@db/platform/schema";
+import { eq } from "drizzle-orm";
+import { resolveMemberContext } from "@/spaces/packages/workspace/server/member-context";
 
 // Response types
 type ApiResponse<T = any> = {
@@ -72,7 +75,10 @@ export const ApiErrorTypes = {
 // Enhanced utilities for tenant-scoped operations
 export interface TenantApiUtilities<Data = any> extends ApiUtilities<Data> {
   tenantId: string;
-  tenantSlug?: string; // Add optional slug for path-based routing
+  tenantSlug?: string;
+  memberProfileId: string | null;
+  orgUnitIds: string[];
+  orgUnitPaths: string[];
 }
 
 // Enhanced utilities for user-level operations (same as base for now, but allows future extension)
@@ -423,6 +429,17 @@ export class PathTenantApiService<SM extends SchemaMap> extends ApiService<SM> {
         tenantSlug = tenant.slug;
       }
 
+      // Resolve user profile for member context lookup
+      const [profile] = await db
+        .select({ id: userProfiles.id })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, apiUser.id))
+        .limit(1);
+
+      const memberContext = profile
+        ? await resolveMemberContext(db, tenantId, profile.id)
+        : { memberProfileId: null, orgUnitIds: [] as string[], orgUnitPaths: [] as string[] };
+
       const handleValidationError = (err: ZodError) => {
         return res.status(400).json({
           success: false,
@@ -476,6 +493,9 @@ export class PathTenantApiService<SM extends SchemaMap> extends ApiService<SM> {
         apiUser,
         tenantId,
         tenantSlug,
+        memberProfileId: memberContext.memberProfileId,
+        orgUnitIds: memberContext.orgUnitIds,
+        orgUnitPaths: memberContext.orgUnitPaths,
         handleValidationError,
         handleError,
       };

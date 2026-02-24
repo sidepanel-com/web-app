@@ -17,22 +17,28 @@ const schemas = {
 };
 
 const handlers: V1ApiHandlers<typeof schemas> = {
-  GET: async ({ db, apiUser, tenantId, userRole }) => {
+  GET: async ({ db, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const peopleService = PeopleService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     return await peopleService.getPeople();
   },
-  POST: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  POST: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const peopleService = PeopleService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     return await peopleService.createPerson(requestData);

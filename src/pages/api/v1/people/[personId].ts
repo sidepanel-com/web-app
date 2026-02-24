@@ -23,33 +23,42 @@ const schemas = {
 };
 
 const handlers: V1ApiHandlers<typeof schemas> = {
-  GET: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  GET: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const peopleService = PeopleService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     return await peopleService.getPersonById(requestData.personId);
   },
-  PATCH: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  PATCH: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const peopleService = PeopleService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     const { personId, ...updates } = requestData;
     return await peopleService.updatePerson(personId, updates);
   },
-  DELETE: async ({ db, requestData, apiUser, tenantId, userRole }) => {
+  DELETE: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const peopleService = PeopleService.create(
       db,
       apiUser.supabaseUserId,
       tenantId,
-      userRole || undefined
+      userRole || undefined,
+      memberProfileId,
+      orgUnitIds,
+      orgUnitPaths,
     );
 
     await peopleService.deletePerson(requestData.personId);
