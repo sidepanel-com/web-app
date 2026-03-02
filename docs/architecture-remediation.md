@@ -6,44 +6,38 @@ Each phase builds on the previous. Phases 0 is independent and can run in parall
 
 ---
 
-## Phase 0 — Quick Wins
+## Phase 0 — Quick Wins (done)
 
 Independent fixes with no cross-phase dependencies.
 
-- Add `<AppPage>` wrapper to `invitations.tsx` and `wrapped/index.tsx`
-- Extract a `useApiKeys` hook from inline fetch calls in `api-keys-settings.tsx`
-- Move inline business logic out of `api-keys`, `users`, and `integrations` API handlers into services
-- Standardize error handling across API routes to consistently use `ApiError`
+- ~~Add `<AppPage>` wrapper to `invitations.tsx` and `wrapped/index.tsx`~~
+- ~~Extract a `useApiKeys` hook from inline fetch calls in `api-keys-settings.tsx`~~
+- ~~Move inline business logic out of `api-keys`, `users`, and `integrations` API handlers into services~~
+- ~~Standardize error handling across API routes to consistently use `ApiError`~~
 
 ---
 
-## Phase 1 — Fix the Identity Layer
+## Phase 1 — Fix the Identity Layer (done)
 
-Wire member profile identity (`memberProfileId`) and org unit context (`orgUnitIds`, `orgUnitPaths`) into the API service layer. Services currently receive `userId` (platform identity) instead of `memberProfileId` (permission-layer identity).
+Wire member profile identity (`memberProfileId`) and org unit context (`orgUnitIds`, `orgUnitPaths`) into the API service layer.
 
-**Scope:**
-
-- Extend `PermissionContext` with `memberProfileId`, `orgUnitIds`, `orgUnitPaths`
-- Create `resolveMemberContext()` to look up member profile and org unit memberships
-- Wire the resolver into `V1ApiService` and `PathTenantApiService`
-- Update service factory methods and all API route call sites
-
-**Does not** change query behavior. Services receive the new context but do not use it yet.
+- ~~Extend `PermissionContext` with `memberProfileId`, `orgUnitIds`, `orgUnitPaths`~~
+- ~~Create `resolveMemberContext()` to look up member profile and org unit memberships~~
+- ~~Wire the resolver into `V1ApiService` and `PathTenantApiService`~~
+- ~~Update service factory methods and all API route call sites~~
 
 ---
 
-## Phase 2 — Implement the Scope Resolver
+## Phase 2 — Implement the Scope Resolver (done)
 
 Build the scope resolver contract that converts member context into query constraints.
 
-**Scope:**
+- ~~Define `ScopeConstraints` type and `resolveWorkspaceScope()` function~~ — `scope-resolver.ts`
+- ~~Integrate scope resolution into `PeopleService` and `CompaniesService` query methods~~
+- ~~Enforce at the API layer: no projection query runs without scope resolution~~
+- ~~Ship with permissive defaults (unrestricted for all roles), then tighten incrementally~~
 
-- Define `ScopeConstraints` type and `resolveWorkspaceScope()` function
-- Integrate scope resolution into `PeopleService` and `CompaniesService` query methods
-- Enforce at the API layer: no projection query runs without scope resolution
-- Ship with permissive defaults (unrestricted for all roles), then tighten incrementally
-
-**Depends on:** Phase 1 (member context must be flowing).
+Shipped with permissive defaults (`restricted: false`). Tightening is a future iteration.
 
 ---
 

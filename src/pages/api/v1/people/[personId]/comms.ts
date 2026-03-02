@@ -5,6 +5,7 @@ import {
   V1ApiHandlers,
 } from "@/spaces/packages/workspace/server/v1-api-service";
 import { PeopleService } from "@/spaces/packages/workspace/server/people.service";
+import { ApiError } from "@/spaces/platform/server/next-api-errors";
 
 const schemas = {
   POST: z.object({
@@ -40,7 +41,7 @@ const handlers: V1ApiHandlers<typeof schemas> = {
     } else if (type && value) {
       return await peopleService.createAndLinkComm(personId, { type, value });
     }
-    throw new Error("Either commId or comm type/value must be provided");
+    throw new ApiError("BAD_REQUEST", "Either commId or comm type/value must be provided");
   },
   DELETE: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const peopleService = PeopleService.create(

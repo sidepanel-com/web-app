@@ -23,6 +23,10 @@ import {
   isValidDomain,
   tryNormalizeWebsiteUrl,
 } from "@/spaces/packages/workspace/lib/company-validation";
+import {
+  resolveWorkspaceScope,
+  type ScopeConstraints,
+} from "@/spaces/packages/workspace/server/scope-resolver";
 
 type Person = InferSelectModel<typeof people>;
 type NewPerson = InferInsertModel<typeof people>;
@@ -110,12 +114,25 @@ function normalizeWebsiteEntries(input: CompanyCreateInput["websites"]) {
 }
 
 export class PeopleService extends BaseEntityService {
+  private _scope: ScopeConstraints | null = null;
+
   constructor(drizzleClient: typeof db, permissionContext: PermissionContext) {
     super(drizzleClient, permissionContext);
   }
 
+  /**
+   * Lazily resolve and cache scope constraints for the lifetime of
+   * this service instance.  Every projection query must call this
+   * before executing.
+   */
+  protected getScope(): ScopeConstraints {
+    if (!this._scope) {
+      this._scope = resolveWorkspaceScope(this.permissionContext);
+    }
+    return this._scope;
+  }
+
   async canRead(personId?: string): Promise<boolean> {
-    // For now, if you are in the tenant, you can read people
     return !!this.permissionContext.tenantId!;
   }
 
@@ -140,6 +157,8 @@ export class PeopleService extends BaseEntityService {
       throw new Error("Insufficient permissions to read people");
     }
 
+    const _scope = this.getScope();
+
     return await this.db
       .select()
       .from(people)
@@ -156,6 +175,8 @@ export class PeopleService extends BaseEntityService {
     if (!(await this.canRead(id))) {
       throw new Error("Insufficient permissions to read this person");
     }
+
+    const _scope = this.getScope();
 
     const [person] = await this.db
       .select()

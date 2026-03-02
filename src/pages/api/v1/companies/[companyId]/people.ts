@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { V1ApiService, V1ApiHandlers } from "@/spaces/packages/workspace/server/v1-api-service";
 import { CompaniesService } from "@/spaces/packages/workspace/server/companies.service";
+import { ApiError } from "@/spaces/platform/server/next-api-errors";
 
 const schemas = {
   POST: z.object({
@@ -29,7 +30,7 @@ const handlers: V1ApiHandlers<typeof schemas> = {
     } else if (firstName && lastName) {
       return await companiesService.createAndLinkPerson(companyId, { firstName, lastName }, role, isPrimary);
     }
-    throw new Error("Either personId or person names must be provided");
+    throw new ApiError("BAD_REQUEST", "Either personId or person names must be provided");
   },
   DELETE: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const companiesService = CompaniesService.create(db, apiUser.supabaseUserId, tenantId, userRole || undefined, memberProfileId, orgUnitIds, orgUnitPaths);

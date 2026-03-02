@@ -6,6 +6,7 @@ import {
 } from "@/spaces/platform/server/next-api-service";
 import { TenantUserService } from "@/spaces/platform/server/tenant-user.service";
 import { TenantService } from "@/spaces/platform/server/tenant.service";
+import { ApiError } from "@/spaces/platform/server/next-api-errors";
 import { Tables } from "@/types/database.types";
 type TenantUser = Tables<"tenant_users">;
 
@@ -42,7 +43,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
     // Get user by tenant user ID
     const user = await tenantUserService.findById(requestData.userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new ApiError("NOT_FOUND", "User not found");
     }
 
     return user;

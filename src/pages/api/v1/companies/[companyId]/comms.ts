@@ -5,6 +5,7 @@ import {
   V1ApiHandlers,
 } from "@/spaces/packages/workspace/server/v1-api-service";
 import { CompaniesService } from "@/spaces/packages/workspace/server/companies.service";
+import { ApiError } from "@/spaces/platform/server/next-api-errors";
 
 const schemas = {
   POST: z.object({
@@ -43,7 +44,7 @@ const handlers: V1ApiHandlers<typeof schemas> = {
         value,
       });
     }
-    throw new Error("Either commId or comm type/value must be provided");
+    throw new ApiError("BAD_REQUEST", "Either commId or comm type/value must be provided");
   },
   DELETE: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const companiesService = CompaniesService.create(

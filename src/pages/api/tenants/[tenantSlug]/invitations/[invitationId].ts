@@ -6,6 +6,7 @@ import {
 } from "@/spaces/platform/server/next-api-service";
 import { TenantUserInvitationService } from "@/spaces/platform/server/tenant-user-invitation.service";
 import { TenantService } from "@/spaces/platform/server/tenant.service";
+import { ApiError } from "@/spaces/platform/server/next-api-errors";
 
 const schemas = {
   POST: z.object({
@@ -44,7 +45,7 @@ const handlers: TenantApiHandlers<typeof schemas> = {
       };
     }
 
-    throw new Error("Invalid action");
+    throw new ApiError("BAD_REQUEST", "Invalid action");
   },
 
   // Cancel/delete invitation

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { V1ApiService, V1ApiHandlers } from "@/spaces/packages/workspace/server/v1-api-service";
 import { PeopleService } from "@/spaces/packages/workspace/server/people.service";
+import { ApiError } from "@/spaces/platform/server/next-api-errors";
 
 const schemas = {
   POST: z.object({
@@ -50,7 +51,7 @@ const handlers: V1ApiHandlers<typeof schemas> = {
         isPrimary
       );
     }
-    throw new Error("Either companyId or company name must be provided");
+    throw new ApiError("BAD_REQUEST", "Either companyId or company name must be provided");
   },
   DELETE: async ({ db, requestData, apiUser, tenantId, userRole, memberProfileId, orgUnitIds, orgUnitPaths }) => {
     const peopleService = PeopleService.create(db, apiUser.supabaseUserId, tenantId, userRole || undefined, memberProfileId, orgUnitIds, orgUnitPaths);
