@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CompaniesList } from "./companies-list";
 import { CompanyFormDialog } from "./company-form-dialog";
 import { useCompanies } from "@/spaces/packages/workspace/hooks/use-companies";
-import type { CompanyWithWeb, Person, Comm } from "@db/ledger/types";
+import type { CompanyWithWeb, Person, Comm } from "@/spaces/packages/workspace/types";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
 

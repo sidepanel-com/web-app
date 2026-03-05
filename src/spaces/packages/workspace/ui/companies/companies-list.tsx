@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CompanyWithWeb } from "@db/ledger/types";
+import type { CompanyWithWeb } from "@/spaces/packages/workspace/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui-primitives/ui/avatar";
 import { Button } from "@/ui-primitives/ui/button";
 import { Search, Plus } from "lucide-react";

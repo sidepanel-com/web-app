@@ -41,29 +41,27 @@ Shipped with permissive defaults (`restricted: false`). Tightening is a future i
 
 ---
 
-## Phase 3 — Isolate Ledger Writes
+## Phase 3 — Isolate Ledger Writes (done)
 
-Extract all write operations to ledger tables into a dedicated ledger service. Projection services currently insert/update/delete directly into `people`, `companies`, `comms`, and junction tables.
+Extract all write operations to ledger tables into a dedicated ledger service.
 
-**Scope:**
+- ~~Create a ledger write service that owns all mutations to ledger tables~~ — `ledger-write.service.ts`
+- ~~Refactor `PeopleService` and `CompaniesService` to delegate writes to the ledger service~~
+- ~~Remove write-capable ledger schema imports from package services~~ — services now import types from `@db/ledger/types` instead of deriving them from schema; all writes go through `LedgerWriteService`
 
-- Create a ledger write service that owns all mutations to ledger tables
-- Refactor `PeopleService` and `CompaniesService` to delegate writes to the ledger service
-- Remove write-capable ledger schema imports from package services
-
-**Depends on:** Phase 2 (identity and scope model must be solid before restructuring write paths).
+Schema table imports remain in package services for SELECT/JOIN queries. Phase 4 addresses those.
 
 ---
 
-## Phase 4 — Clean Up Cross-Layer Imports
+## Phase 4 — Clean Up Cross-Layer Imports (done)
 
 Remove direct imports that cross layer boundaries.
 
-**Scope:**
+- ~~Create workspace projection types that wrap/re-export ledger types~~ — `workspace/types.ts` re-exports all ledger types, `PermissionContext`, and `DrizzleClient`
+- ~~Replace direct platform schema imports in package services with platform service calls or dependency injection~~ — `platform-refs.ts` consolidates all `@db/platform/schema` access to a single boundary file; all other workspace files import through it
+- ~~Decouple projection services from `BaseEntityService`~~ — `WorkspaceService` base class in `workspace-service.ts` owns scope resolution, ledger write delegation, and permission checks; `PeopleService` and `CompaniesService` now extend `WorkspaceService` instead of `BaseEntityService`
 
-- Create workspace projection types that wrap/re-export ledger types
-- Replace direct platform schema imports in package services with platform service calls or dependency injection
-- Decouple projection services from `BaseEntityService` (create workspace-specific base or use composition)
+Remaining platform imports are client-side contexts (`usePlatformTenant`), client SDK types (`ApiClient`), and platform service calls (`TenantService`, `ApiKeyService`) — all intended API-level consumption.
 
 **Depends on:** Phase 3 (ledger service removes most problematic imports).
 

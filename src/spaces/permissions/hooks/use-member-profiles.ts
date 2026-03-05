@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
-import type { MemberWithStatus } from "@/spaces/packages/workspace/server/member-profile.service";
+import type { MemberWithStatus } from "@/spaces/permissions/server/member-profile.service";
 import { toast } from "sonner";
 
 export function useMemberProfiles() {

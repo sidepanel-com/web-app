@@ -5,6 +5,14 @@
 
 export const PACKAGE_COMMS = "comms" as const;
 
+/**
+ * Maps scope package prefixes to tenant_packages.package_id values.
+ * Used by V1ApiService to gate requests when a package is disabled.
+ */
+export const SCOPE_PREFIX_TO_PACKAGE_ID: Record<string, string> = {
+  [PACKAGE_COMMS]: "workspace",
+};
+
 /** Comms package scopes (current product). Expand when adding emails, meetings, calls, messages. */
 export const V1_SCOPES = {
   // People

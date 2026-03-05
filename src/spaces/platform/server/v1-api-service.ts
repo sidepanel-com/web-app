@@ -13,9 +13,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getRequiredScopeForRoute,
   scopesInclude,
+  SCOPE_PREFIX_TO_PACKAGE_ID,
   type V1Scope,
-} from "@/spaces/packages/workspace/server/scopes";
-import { resolveMemberContext } from "@/spaces/packages/workspace/server/member-context";
+} from "@/spaces/platform/server/v1-scopes";
+import { resolveMemberContext } from "@/spaces/permissions/server/member-context";
+import { PackageService } from "@/spaces/platform/server/package.service";
 
 // Response types
 type ApiResponse<T = unknown> = {
@@ -190,6 +192,26 @@ export class V1ApiService<SM extends SchemaMap> {
             success: false,
             error: "Insufficient scope for this request",
           });
+        }
+      }
+
+      // Package enablement check — derive package from route scope
+      {
+        const routePath = req.url?.split("?")[0] ?? "";
+        const routeScope = getRequiredScopeForRoute(method as HttpMethod, routePath);
+        if (routeScope) {
+          const scopePrefix = routeScope.split(":")[0];
+          const packageId = scopePrefix ? SCOPE_PREFIX_TO_PACKAGE_ID[scopePrefix] : undefined;
+          if (packageId) {
+            const packageService = new PackageService(db);
+            const enabled = await packageService.isPackageEnabled(tenant.id, packageId);
+            if (!enabled) {
+              return res.status(403).json({
+                success: false,
+                error: `Package "${packageId}" is disabled for this tenant`,
+              });
+            }
+          }
         }
       }
 

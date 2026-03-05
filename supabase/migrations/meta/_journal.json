@@ -8,6 +8,13 @@
       "when": 1771855266346,
       "tag": "0000_supreme_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772502440481,
+      "tag": "0001_spicy_kitty_pryde",
+      "breakpoints": true
     }
   ]
 }

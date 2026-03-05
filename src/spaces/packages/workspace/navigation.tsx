@@ -1,7 +1,8 @@
-import { Eye, LayoutGrid, Shield } from "lucide-react";
+import { Eye, LayoutGrid } from "lucide-react";
 import type { NavSection } from "@/spaces/platform/ui/nav-types";
+import { registerNavigation } from "@/spaces/platform/ui/nav-registry";
 
-export const appNavigation: NavSection[] = [
+const appNavigation: NavSection[] = [
   {
     title: "App",
     items: [
@@ -23,8 +24,8 @@ export const appNavigation: NavSection[] = [
           { title: "Members", url: "/permissions/members" },
         ],
       },
-
     ],
   },
 ];
 
+registerNavigation(appNavigation);

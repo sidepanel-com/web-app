@@ -6,6 +6,7 @@ import {
 import { tenantUsers, userProfiles } from "@db/platform/schema";
 import { and, count, eq, like, sql } from "drizzle-orm";
 import type { DrizzleClient } from "@/spaces/platform/server/db";
+import { ApiError } from "@/spaces/platform/server/next-api-errors";
 
 export interface OrgUnitMember {
   memberProfileId: string;
@@ -65,7 +66,7 @@ export class OrgUnitService {
       .limit(1);
 
     if (!unit) {
-      throw new Error("Org unit not found");
+      throw new ApiError("NOT_FOUND", "Org unit not found");
     }
     return unit;
   }
@@ -88,6 +89,10 @@ export class OrgUnitService {
       })
       .returning();
 
+    if (!unit) {
+      throw new ApiError("INTERNAL_SERVER_ERROR", "Failed to create org unit");
+    }
+
     const computedPath = parentPath
       ? `${parentPath}/${unit.id}`
       : `/${unit.id}`;
@@ -97,6 +102,10 @@ export class OrgUnitService {
       .set({ path: computedPath })
       .where(eq(orgUnits.id, unit.id))
       .returning();
+
+    if (!updated) {
+      throw new ApiError("INTERNAL_SERVER_ERROR", "Failed to update org unit path");
+    }
 
     return updated;
   }
@@ -122,13 +131,14 @@ export class OrgUnitService {
 
     if (isReparenting) {
       if (data.parentOrgUnitId === id) {
-        throw new Error("Cannot set an org unit as its own parent");
+        throw new ApiError("BAD_REQUEST", "Cannot set an org unit as its own parent");
       }
 
       if (data.parentOrgUnitId) {
         const newParent = await this.getById(data.parentOrgUnitId);
         if (newParent.path?.startsWith(existing.path ?? "")) {
-          throw new Error(
+          throw new ApiError(
+            "BAD_REQUEST",
             "Cannot move an org unit under one of its descendants",
           );
         }
@@ -171,6 +181,10 @@ export class OrgUnitService {
       .where(and(eq(orgUnits.id, id), eq(orgUnits.tenantId, this.tenantId)))
       .returning();
 
+    if (!updated) {
+      throw new ApiError("NOT_FOUND", "Org unit not found");
+    }
+
     return updated;
   }
 
@@ -189,7 +203,8 @@ export class OrgUnitService {
       .limit(1);
 
     if (child) {
-      throw new Error(
+      throw new ApiError(
+        "BAD_REQUEST",
         "Cannot delete org unit with children. Remove or move children first.",
       );
     }
@@ -243,7 +258,7 @@ export class OrgUnitService {
       .limit(1);
 
     if (!profile) {
-      throw new Error("Member profile not found");
+      throw new ApiError("NOT_FOUND", "Member profile not found");
     }
 
     const [existing] = await this.db
@@ -258,7 +273,7 @@ export class OrgUnitService {
       .limit(1);
 
     if (existing) {
-      throw new Error("Member is already assigned to this org unit");
+      throw new ApiError("BAD_REQUEST", "Member is already assigned to this org unit");
     }
 
     const [assignment] = await this.db
@@ -269,6 +284,10 @@ export class OrgUnitService {
         memberProfileId,
       })
       .returning();
+
+    if (!assignment) {
+      throw new ApiError("INTERNAL_SERVER_ERROR", "Failed to assign member to org unit");
+    }
 
     return assignment;
   }
@@ -287,7 +306,7 @@ export class OrgUnitService {
       .limit(1);
 
     if (!assignment) {
-      throw new Error("Member is not assigned to this org unit");
+      throw new ApiError("NOT_FOUND", "Member is not assigned to this org unit");
     }
 
     await this.db

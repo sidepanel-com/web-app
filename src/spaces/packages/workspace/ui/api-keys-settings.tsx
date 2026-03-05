@@ -41,7 +41,7 @@ import { Label } from "@/ui-primitives/ui/label";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { COMMS_SCOPES_FULL, COMMS_SCOPES_READ } from "@/spaces/packages/workspace/server/scopes";
+import { COMMS_SCOPES_FULL, COMMS_SCOPES_READ } from "@/spaces/platform/server/v1-scopes";
 import {
   useApiKeys,
   type CreatedKey,

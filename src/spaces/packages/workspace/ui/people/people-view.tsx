@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PeopleList } from "./people-list";
 import { PersonFormDialog } from "./person-form-dialog";
 import { usePeople } from "@/spaces/packages/workspace/hooks/use-people";
-import type { Person, CompanyWithWeb, Comm } from "@db/ledger/types";
+import type { Person, CompanyWithWeb, Comm } from "@/spaces/packages/workspace/types";
 import { Alert, AlertDescription } from "@/ui-primitives/ui/alert";
 import { AlertCircle } from "lucide-react";
 

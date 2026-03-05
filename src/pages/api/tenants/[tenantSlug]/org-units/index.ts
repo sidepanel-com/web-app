@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
-import { OrgUnitService } from "@/spaces/packages/workspace/server/org-unit.service";
+import { OrgUnitService } from "@/spaces/permissions/server/org-unit.service";
 import {
   PathTenantApiService,
   type TenantApiHandlers,

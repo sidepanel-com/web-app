@@ -13,7 +13,8 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/ui-primitives/ui/sidebar";
-import { appNavigation } from "@/spaces/packages/workspace/navigation";
+import { getRegisteredNavigation } from "@/spaces/platform/ui/nav-registry";
+import { useEnabledPackages } from "@/spaces/platform/hooks/use-enabled-packages";
 
 const data = {
   navItems: [
@@ -58,13 +59,16 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const enabledPackageIds = useEnabledPackages();
+  const packageNavSections = getRegisteredNavigation(enabledPackageIds ?? undefined);
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <AppTenantSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        {appNavigation.map((section) => (
+        {packageNavSections.map((section) => (
           <AppNavSection
             key={section.title}
             title={section.title}

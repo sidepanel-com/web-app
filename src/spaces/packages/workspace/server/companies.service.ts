@@ -1,5 +1,4 @@
 import { eq, and, inArray } from "drizzle-orm";
-import type { db } from "@/spaces/platform/server/db";
 import {
   companies,
   peopleCompanies,
@@ -10,11 +9,6 @@ import {
   companyWebsites,
 } from "@db/ledger/schema";
 import {
-  BaseEntityService,
-  type PermissionContext,
-} from "@/spaces/platform/server/base-entity.service";
-import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
-import {
   normalizeComm,
   type CommType,
 } from "@/spaces/packages/workspace/lib/comm-validation";
@@ -23,29 +17,24 @@ import {
   isValidDomain,
   tryNormalizeWebsiteUrl,
 } from "@/spaces/packages/workspace/lib/company-validation";
-import {
-  resolveWorkspaceScope,
-  type ScopeConstraints,
-} from "@/spaces/packages/workspace/server/scope-resolver";
+import { WorkspaceService } from "@/spaces/packages/workspace/server/workspace-service";
+import type {
+  PermissionContext,
+  DrizzleClient,
+  Person,
+  NewPerson,
+  Company,
+  NewCompany,
+  Comm,
+  NewComm,
+  CompanyDomain,
+  CompanyWebsite,
+  CompanyWithWeb,
+} from "@/spaces/packages/workspace/types";
 
-type Company = InferSelectModel<typeof companies>;
-type NewCompany = InferInsertModel<typeof companies>;
 type CompanyUpdate = Partial<
   Omit<Company, "id" | "tenantId" | "createdAt" | "updatedAt">
 >;
-
-type Person = InferSelectModel<typeof people>;
-type NewPerson = InferInsertModel<typeof people>;
-type Comm = InferSelectModel<typeof comms>;
-type NewComm = InferInsertModel<typeof comms>;
-
-type CompanyDomain = InferSelectModel<typeof companyDomains>;
-type CompanyWebsite = InferSelectModel<typeof companyWebsites>;
-
-type CompanyWithWeb = Company & {
-  domains: CompanyDomain[];
-  websites: CompanyWebsite[];
-};
 
 type CompanyCreateInput = Omit<
   NewCompany,
@@ -78,7 +67,6 @@ function normalizeDomainEntries(
     result.push({ domain, isPrimary: !!item.isPrimary });
   }
 
-  // Ensure exactly one primary (if any values exist).
   const primaryIdx = result.findIndex((d) => d.isPrimary);
   if (result.length > 0) {
     if (primaryIdx === -1) result[0]!.isPrimary = true;
@@ -112,7 +100,6 @@ function normalizeWebsiteEntries(
     });
   }
 
-  // Ensure exactly one primary (if any values exist).
   const primaryIdx = result.findIndex((w) => w.isPrimary);
   if (result.length > 0) {
     if (primaryIdx === -1) result[0]!.isPrimary = true;
@@ -125,23 +112,9 @@ function normalizeWebsiteEntries(
   return result;
 }
 
-export class CompaniesService extends BaseEntityService {
-  private _scope: ScopeConstraints | null = null;
-
-  constructor(drizzleClient: typeof db, permissionContext: PermissionContext) {
+export class CompaniesService extends WorkspaceService {
+  constructor(drizzleClient: DrizzleClient, permissionContext: PermissionContext) {
     super(drizzleClient, permissionContext);
-  }
-
-  /**
-   * Lazily resolve and cache scope constraints for the lifetime of
-   * this service instance.  Every projection query must call this
-   * before executing.
-   */
-  protected getScope(): ScopeConstraints {
-    if (!this._scope) {
-      this._scope = resolveWorkspaceScope(this.permissionContext);
-    }
-    return this._scope;
   }
 
   async canRead(companyId?: string): Promise<boolean> {
@@ -306,61 +279,20 @@ export class CompaniesService extends BaseEntityService {
     if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to create a company");
     }
-
     if (!(await this.canCreate())) {
       throw new Error("Insufficient permissions to create a company");
     }
 
     const normalizedDomains = normalizeDomainEntries(data.domains);
     const normalizedWebsites = normalizeWebsiteEntries(data.websites);
-
     const { domains: _domains, websites: _websites, ...companyData } = data;
 
-    return await this.db.transaction(async (tx) => {
-      const [company] = await tx
-        .insert(companies)
-        .values({
-          ...companyData,
-          tenantId: this.permissionContext.tenantId!!,
-        })
-        .returning();
-
-      if (!company) throw new Error("Failed to create company");
-
-      let createdDomains: CompanyDomain[] = [];
-      let createdWebsites: CompanyWebsite[] = [];
-
-      if (normalizedDomains.length > 0) {
-        createdDomains = await tx
-          .insert(companyDomains)
-          .values(
-            normalizedDomains.map((d) => ({
-              tenantId: this.permissionContext.tenantId!!,
-              companyId: company.id,
-              domain: d.domain,
-              isPrimary: d.isPrimary,
-            }))
-          )
-          .returning();
-      }
-
-      if (normalizedWebsites.length > 0) {
-        createdWebsites = await tx
-          .insert(companyWebsites)
-          .values(
-            normalizedWebsites.map((w) => ({
-              tenantId: this.permissionContext.tenantId!!,
-              companyId: company.id,
-              url: w.url,
-              type: w.type,
-              isPrimary: w.isPrimary,
-            }))
-          )
-          .returning();
-      }
-
-      return { ...company, domains: createdDomains, websites: createdWebsites };
-    });
+    return this.ledger.insertCompany(
+      this.permissionContext.tenantId!,
+      companyData,
+      normalizedDomains,
+      normalizedWebsites,
+    );
   }
 
   async updateCompany(
@@ -370,7 +302,6 @@ export class CompaniesService extends BaseEntityService {
     if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to update a company");
     }
-
     if (!(await this.canUpdate(id))) {
       throw new Error("Insufficient permissions to update this company");
     }
@@ -390,118 +321,23 @@ export class CompaniesService extends BaseEntityService {
       ...companyUpdates
     } = updates;
 
-    return await this.db.transaction(async (tx) => {
-      const [updated] = await tx
-        .update(companies)
-        .set({
-          ...companyUpdates,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(
-          and(
-            eq(companies.id, id),
-            eq(companies.tenantId, this.permissionContext.tenantId!)
-          )
-        )
-        .returning();
-
-      if (!updated) throw new Error("Company not found or update failed");
-
-      let finalDomains: CompanyDomain[];
-      let finalWebsites: CompanyWebsite[];
-
-      if (normalizedDomains !== undefined) {
-        await tx
-          .delete(companyDomains)
-          .where(
-            and(
-              eq(companyDomains.tenantId, this.permissionContext.tenantId!),
-              eq(companyDomains.companyId, id)
-            )
-          );
-        finalDomains =
-          normalizedDomains.length > 0
-            ? await tx
-                .insert(companyDomains)
-                .values(
-                  normalizedDomains.map((d) => ({
-                    tenantId: this.permissionContext.tenantId!!,
-                    companyId: id,
-                    domain: d.domain,
-                    isPrimary: d.isPrimary,
-                  }))
-                )
-                .returning()
-            : [];
-      } else {
-        finalDomains = await tx
-          .select()
-          .from(companyDomains)
-          .where(
-            and(
-              eq(companyDomains.tenantId, this.permissionContext.tenantId!),
-              eq(companyDomains.companyId, id)
-            )
-          );
-      }
-
-      if (normalizedWebsites !== undefined) {
-        await tx
-          .delete(companyWebsites)
-          .where(
-            and(
-              eq(companyWebsites.tenantId, this.permissionContext.tenantId!),
-              eq(companyWebsites.companyId, id)
-            )
-          );
-        finalWebsites =
-          normalizedWebsites.length > 0
-            ? await tx
-                .insert(companyWebsites)
-                .values(
-                  normalizedWebsites.map((w) => ({
-                    tenantId: this.permissionContext.tenantId!!,
-                    companyId: id,
-                    url: w.url,
-                    type: w.type,
-                    isPrimary: w.isPrimary,
-                  }))
-                )
-                .returning()
-            : [];
-      } else {
-        finalWebsites = await tx
-          .select()
-          .from(companyWebsites)
-          .where(
-            and(
-              eq(companyWebsites.tenantId, this.permissionContext.tenantId!),
-              eq(companyWebsites.companyId, id)
-            )
-          );
-      }
-
-      return { ...updated, domains: finalDomains, websites: finalWebsites };
-    });
+    return this.ledger.updateCompany(
+      this.permissionContext.tenantId!,
+      id,
+      companyUpdates,
+      normalizedDomains,
+      normalizedWebsites,
+    );
   }
 
   async deleteCompany(id: string): Promise<void> {
     if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to delete a company");
     }
-
     if (!(await this.canDelete(id))) {
       throw new Error("Insufficient permissions to delete this company");
     }
-
-    await this.db
-      .delete(companies)
-      .where(
-        and(
-          eq(companies.id, id),
-          eq(companies.tenantId, this.permissionContext.tenantId!)
-        )
-      );
+    await this.ledger.deleteCompany(this.permissionContext.tenantId!, id);
   }
 
   /* =========================
@@ -516,30 +352,23 @@ export class CompaniesService extends BaseEntityService {
   ): Promise<void> {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
-
-    await this.db.insert(peopleCompanies).values({
-      tenantId: this.permissionContext.tenantId!!,
-      companyId,
+    await this.ledger.linkPersonCompany(
+      this.permissionContext.tenantId!,
       personId,
+      companyId,
       role,
-      isPrimary: isPrimary ?? false,
-      startAt: new Date().toISOString(),
-    });
+      isPrimary,
+    );
   }
 
   async removePersonLink(companyId: string, personId: string): Promise<void> {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
-
-    await this.db
-      .delete(peopleCompanies)
-      .where(
-        and(
-          eq(peopleCompanies.tenantId, this.permissionContext.tenantId!),
-          eq(peopleCompanies.companyId, companyId),
-          eq(peopleCompanies.personId, personId)
-        )
-      );
+    await this.ledger.unlinkPersonCompany(
+      this.permissionContext.tenantId!,
+      personId,
+      companyId,
+    );
   }
 
   async createAndLinkPerson(
@@ -551,18 +380,11 @@ export class CompaniesService extends BaseEntityService {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
 
-    const [person] = await this.db
-      .insert(people)
-      .values({
-        ...data,
-        tenantId: this.permissionContext.tenantId!!,
-      })
-      .returning();
-
-    if (!person) throw new Error("Failed to create person");
-
+    const person = await this.ledger.insertPerson(
+      this.permissionContext.tenantId!,
+      data,
+    );
     await this.addPersonLink(companyId, person.id, role, isPrimary);
-
     return person;
   }
 
@@ -573,42 +395,21 @@ export class CompaniesService extends BaseEntityService {
   async addCommLink(companyId: string, commId: string): Promise<void> {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
-
-    // Check if link already exists
-    const [existingLink] = await this.db
-      .select()
-      .from(commsCompanies)
-      .where(
-        and(
-          eq(commsCompanies.tenantId, this.permissionContext.tenantId!),
-          eq(commsCompanies.companyId, companyId),
-          eq(commsCompanies.commId, commId)
-        )
-      )
-      .limit(1);
-
-    if (!existingLink) {
-      await this.db.insert(commsCompanies).values({
-        tenantId: this.permissionContext.tenantId!!,
-        companyId,
-        commId,
-      });
-    }
+    await this.ledger.linkCommCompany(
+      this.permissionContext.tenantId!,
+      commId,
+      companyId,
+    );
   }
 
   async removeCommLink(companyId: string, commId: string): Promise<void> {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
-
-    await this.db
-      .delete(commsCompanies)
-      .where(
-        and(
-          eq(commsCompanies.tenantId, this.permissionContext.tenantId!),
-          eq(commsCompanies.companyId, companyId),
-          eq(commsCompanies.commId, commId)
-        )
-      );
+    await this.ledger.unlinkCommCompany(
+      this.permissionContext.tenantId!,
+      commId,
+      companyId,
+    );
   }
 
   async createAndLinkComm(
@@ -621,61 +422,29 @@ export class CompaniesService extends BaseEntityService {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
 
-    // Normalize input first to ensure consistent comparison
     const { value, canonicalValue } = normalizeComm(
       data.type as CommType,
       data.value
     );
 
-    // Try to find existing comm first using normalized canonicalValue
-    let [comm] = await this.db
-      .select()
-      .from(comms)
-      .where(
-        and(
-          eq(comms.tenantId, this.permissionContext.tenantId!),
-          eq(comms.type, data.type),
-          eq(comms.canonicalValue, canonicalValue)
-        )
-      )
-      .limit(1);
+    const comm = await this.ledger.findOrCreateComm(
+      this.permissionContext.tenantId!,
+      data.type,
+      value,
+      canonicalValue,
+    );
 
-    if (!comm) {
-      [comm] = await this.db
-        .insert(comms)
-        .values({
-          tenantId: this.permissionContext.tenantId!!,
-          type: data.type,
-          value,
-          canonicalValue,
-        })
-        .returning();
-    }
-
-    if (!comm) throw new Error("Failed to create or find comm");
-
-    // Check if link already exists
-    const [existingLink] = await this.db
-      .select()
-      .from(commsCompanies)
-      .where(
-        and(
-          eq(commsCompanies.tenantId, this.permissionContext.tenantId!),
-          eq(commsCompanies.companyId, companyId),
-          eq(commsCompanies.commId, comm.id)
-        )
-      )
-      .limit(1);
-
-    if (!existingLink) {
-      await this.addCommLink(companyId, comm.id);
-    }
+    await this.ledger.linkCommCompany(
+      this.permissionContext.tenantId!,
+      comm.id,
+      companyId,
+    );
 
     return comm;
   }
 
   static create(
-    drizzleClient: typeof db,
+    drizzleClient: DrizzleClient,
     userId: string,
     tenantId: string,
     userRole?: PermissionContext["userRole"],

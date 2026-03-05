@@ -1,14 +1,29 @@
-import { GetServerSideProps } from "next";
+import type { GetServerSideProps } from "next";
 import { createClient } from "@/spaces/identity/supabase.server-props";
 import { CrmApp } from "@/spaces/packages/workspace/ui/crm-app";
 import { AppPage } from "@/spaces/platform/ui/layout/app-page";
+import { useEnabledPackages } from "@/spaces/platform/hooks/use-enabled-packages";
 
 export default function WrappedAppPage() {
+  const enabledPackageIds = useEnabledPackages();
+
+  if (enabledPackageIds === null) {
+    return <AppPage><div /></AppPage>;
+  }
+
+  const workspaceEnabled = enabledPackageIds.includes("workspace");
+
   return (
     <AppPage>
-      <div className="fixed inset-0 overflow-hidden bg-background">
-        <CrmApp />
-      </div>
+      {workspaceEnabled ? (
+        <div className="fixed inset-0 overflow-hidden bg-background">
+          <CrmApp />
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-screen text-muted-foreground text-sm">
+          Package not active
+        </div>
+      )}
     </AppPage>
   );
 }

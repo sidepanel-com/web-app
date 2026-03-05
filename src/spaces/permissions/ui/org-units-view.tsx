@@ -13,12 +13,12 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useMemberProfiles } from "@/spaces/packages/workspace/hooks/use-member-profiles";
-import { useOrgUnits } from "@/spaces/packages/workspace/hooks/use-org-units";
+import { useMemberProfiles } from "@/spaces/permissions/hooks/use-member-profiles";
+import { useOrgUnits } from "@/spaces/permissions/hooks/use-org-units";
 import type {
   OrgUnitMember,
   OrgUnitWithMemberCount,
-} from "@/spaces/packages/workspace/server/org-unit.service";
+} from "@/spaces/permissions/server/org-unit.service";
 import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
 import {
   AlertDialog,

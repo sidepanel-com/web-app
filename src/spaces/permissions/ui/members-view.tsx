@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/ui-primitives/ui/table";
 import { UserPlus, Loader2 } from "lucide-react";
-import { useMemberProfiles } from "@/spaces/packages/workspace/hooks/use-member-profiles";
+import { useMemberProfiles } from "@/spaces/permissions/hooks/use-member-profiles";
 import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
 
 export function MembersView() {

@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   V1ApiService,
   type V1ApiHandlers,
-} from "@/spaces/packages/workspace/server/v1-api-service";
+} from "@/spaces/platform/server/v1-api-service";
 import { CompaniesService } from "@/spaces/packages/workspace/server/companies.service";
 
 const schemas = {

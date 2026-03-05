@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Person } from "@db/ledger/types";
+import type { Person } from "@/spaces/packages/workspace/types";
 import { Avatar, AvatarFallback } from "@/ui-primitives/ui/avatar";
 import { Button } from "@/ui-primitives/ui/button";
 import { Search, UserPlus } from "lucide-react";

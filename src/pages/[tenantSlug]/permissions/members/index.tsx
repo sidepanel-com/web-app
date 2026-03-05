@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from "next";
 import { createClient } from "@/spaces/identity/supabase.server-props";
 import { AppPage } from "@/spaces/platform/ui/layout/app-page";
-import { MembersView } from "@/spaces/packages/workspace/ui/permissions/members-view";
+import { MembersView } from "@/spaces/permissions/ui/members-view";
 
 export default function MembersPage() {
   return (

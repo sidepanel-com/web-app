@@ -1,5 +1,4 @@
 import { eq, and, inArray } from "drizzle-orm";
-import type { db } from "@/spaces/platform/server/db";
 import {
   people,
   peopleCompanies,
@@ -10,11 +9,6 @@ import {
   companyWebsites,
 } from "@db/ledger/schema";
 import {
-  BaseEntityService,
-  type PermissionContext,
-} from "@/spaces/platform/server/base-entity.service";
-import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
-import {
   normalizeComm,
   type CommType,
 } from "@/spaces/packages/workspace/lib/comm-validation";
@@ -23,28 +17,24 @@ import {
   isValidDomain,
   tryNormalizeWebsiteUrl,
 } from "@/spaces/packages/workspace/lib/company-validation";
-import {
-  resolveWorkspaceScope,
-  type ScopeConstraints,
-} from "@/spaces/packages/workspace/server/scope-resolver";
+import { WorkspaceService } from "@/spaces/packages/workspace/server/workspace-service";
+import type {
+  PermissionContext,
+  DrizzleClient,
+  Person,
+  NewPerson,
+  Company,
+  NewCompany,
+  Comm,
+  NewComm,
+  CompanyDomain,
+  CompanyWebsite,
+  CompanyWithWeb,
+} from "@/spaces/packages/workspace/types";
 
-type Person = InferSelectModel<typeof people>;
-type NewPerson = InferInsertModel<typeof people>;
 type PersonUpdate = Partial<
   Omit<Person, "id" | "tenantId" | "createdAt" | "updatedAt">
 >;
-
-type Company = InferSelectModel<typeof companies>;
-type NewCompany = InferInsertModel<typeof companies>;
-type Comm = InferSelectModel<typeof comms>;
-type NewComm = InferInsertModel<typeof comms>;
-
-type CompanyDomain = InferSelectModel<typeof companyDomains>;
-type CompanyWebsite = InferSelectModel<typeof companyWebsites>;
-type CompanyWithWeb = Company & {
-  domains: CompanyDomain[];
-  websites: CompanyWebsite[];
-};
 
 type CompanyCreateInput = Omit<
   NewCompany,
@@ -113,23 +103,9 @@ function normalizeWebsiteEntries(input: CompanyCreateInput["websites"]) {
   return result;
 }
 
-export class PeopleService extends BaseEntityService {
-  private _scope: ScopeConstraints | null = null;
-
-  constructor(drizzleClient: typeof db, permissionContext: PermissionContext) {
+export class PeopleService extends WorkspaceService {
+  constructor(drizzleClient: DrizzleClient, permissionContext: PermissionContext) {
     super(drizzleClient, permissionContext);
-  }
-
-  /**
-   * Lazily resolve and cache scope constraints for the lifetime of
-   * this service instance.  Every projection query must call this
-   * before executing.
-   */
-  protected getScope(): ScopeConstraints {
-    if (!this._scope) {
-      this._scope = resolveWorkspaceScope(this.permissionContext);
-    }
-    return this._scope;
   }
 
   async canRead(personId?: string): Promise<boolean> {
@@ -277,71 +253,30 @@ export class PeopleService extends BaseEntityService {
     if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to create a person");
     }
-
     if (!(await this.canCreate())) {
       throw new Error("Insufficient permissions to create a person");
     }
-
-    const [person] = await this.db
-      .insert(people)
-      .values({
-        ...data,
-        tenantId: this.permissionContext.tenantId!!,
-      })
-      .returning();
-
-    if (!person) throw new Error("Failed to create person");
-
-    return person;
+    return this.ledger.insertPerson(this.permissionContext.tenantId!, data);
   }
 
   async updatePerson(id: string, updates: PersonUpdate): Promise<Person> {
     if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to update a person");
     }
-
     if (!(await this.canUpdate(id))) {
       throw new Error("Insufficient permissions to update this person");
     }
-
-    const [updated] = await this.db
-      .update(people)
-      .set({
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(
-        and(
-          eq(people.id, id),
-          eq(people.tenantId, this.permissionContext.tenantId!)
-        )
-      )
-      .returning();
-
-    if (!updated) throw new Error("Person not found or update failed");
-
-    return updated;
+    return this.ledger.updatePerson(this.permissionContext.tenantId!, id, updates);
   }
 
   async deletePerson(id: string): Promise<void> {
     if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to delete a person");
     }
-
     if (!(await this.canDelete(id))) {
       throw new Error("Insufficient permissions to delete this person");
     }
-
-    const result = await this.db
-      .delete(people)
-      .where(
-        and(
-          eq(people.id, id),
-          eq(people.tenantId, this.permissionContext.tenantId!)
-        )
-      );
-
-    // Drizzle delete result handling varies by driver, but standard returning() or just awaiting is common.
+    await this.ledger.deletePerson(this.permissionContext.tenantId!, id);
   }
 
   /* =========================
@@ -356,30 +291,23 @@ export class PeopleService extends BaseEntityService {
   ): Promise<void> {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
-
-    await this.db.insert(peopleCompanies).values({
-      tenantId: this.permissionContext.tenantId!!,
+    await this.ledger.linkPersonCompany(
+      this.permissionContext.tenantId!,
       personId,
       companyId,
       role,
-      isPrimary: isPrimary ?? false,
-      startAt: new Date().toISOString(),
-    });
+      isPrimary,
+    );
   }
 
   async removeCompanyLink(personId: string, companyId: string): Promise<void> {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
-
-    await this.db
-      .delete(peopleCompanies)
-      .where(
-        and(
-          eq(peopleCompanies.tenantId, this.permissionContext.tenantId!),
-          eq(peopleCompanies.personId, personId),
-          eq(peopleCompanies.companyId, companyId)
-        )
-      );
+    await this.ledger.unlinkPersonCompany(
+      this.permissionContext.tenantId!,
+      personId,
+      companyId,
+    );
   }
 
   async createAndLinkCompany(
@@ -395,46 +323,15 @@ export class PeopleService extends BaseEntityService {
     const normalizedWebsites = normalizeWebsiteEntries(data.websites);
     const { domains: _domains, websites: _websites, ...companyData } = data;
 
-    const company = await this.db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(companies)
-        .values({
-          ...companyData,
-          tenantId: this.permissionContext.tenantId!!,
-        })
-        .returning();
+    const result = await this.ledger.insertCompany(
+      this.permissionContext.tenantId!,
+      companyData,
+      normalizedDomains,
+      normalizedWebsites,
+    );
 
-      if (!created) throw new Error("Failed to create company");
-
-      if (normalizedDomains.length > 0) {
-        await tx.insert(companyDomains).values(
-          normalizedDomains.map((d) => ({
-            tenantId: this.permissionContext.tenantId!!,
-            companyId: created.id,
-            domain: d.domain,
-            isPrimary: d.isPrimary,
-          }))
-        );
-      }
-
-      if (normalizedWebsites.length > 0) {
-        await tx.insert(companyWebsites).values(
-          normalizedWebsites.map((w) => ({
-            tenantId: this.permissionContext.tenantId!!,
-            companyId: created.id,
-            url: w.url,
-            type: w.type,
-            isPrimary: w.isPrimary,
-          }))
-        );
-      }
-
-      return created;
-    });
-
-    await this.addCompanyLink(personId, company.id, role, isPrimary);
-
-    return company;
+    await this.addCompanyLink(personId, result.id, role, isPrimary);
+    return result;
   }
 
   /* =========================
@@ -444,43 +341,21 @@ export class PeopleService extends BaseEntityService {
   async addCommLink(personId: string, commId: string): Promise<void> {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
-
-    // Check if link already exists
-    const [existingLink] = await this.db
-      .select()
-      .from(commsPeople)
-      .where(
-        and(
-          eq(commsPeople.tenantId, this.permissionContext.tenantId!),
-          eq(commsPeople.personId, personId),
-          eq(commsPeople.commId, commId)
-        )
-      )
-      .limit(1);
-
-    if (!existingLink) {
-      await this.db.insert(commsPeople).values({
-        tenantId: this.permissionContext.tenantId!!,
-        personId,
-        commId,
-        startAt: new Date().toISOString(),
-      });
-    }
+    await this.ledger.linkCommPerson(
+      this.permissionContext.tenantId!,
+      commId,
+      personId,
+    );
   }
 
   async removeCommLink(personId: string, commId: string): Promise<void> {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
-
-    await this.db
-      .delete(commsPeople)
-      .where(
-        and(
-          eq(commsPeople.tenantId, this.permissionContext.tenantId!),
-          eq(commsPeople.personId, personId),
-          eq(commsPeople.commId, commId)
-        )
-      );
+    await this.ledger.unlinkCommPerson(
+      this.permissionContext.tenantId!,
+      commId,
+      personId,
+    );
   }
 
   async createAndLinkComm(
@@ -493,61 +368,29 @@ export class PeopleService extends BaseEntityService {
     if (!this.permissionContext.tenantId!)
       throw new Error("Tenant ID is required");
 
-    // Normalize input first to ensure consistent comparison
     const { value, canonicalValue } = normalizeComm(
       data.type as CommType,
       data.value
     );
 
-    // Try to find existing comm first using normalized canonicalValue
-    let [comm] = await this.db
-      .select()
-      .from(comms)
-      .where(
-        and(
-          eq(comms.tenantId, this.permissionContext.tenantId!),
-          eq(comms.type, data.type),
-          eq(comms.canonicalValue, canonicalValue)
-        )
-      )
-      .limit(1);
+    const comm = await this.ledger.findOrCreateComm(
+      this.permissionContext.tenantId!,
+      data.type,
+      value,
+      canonicalValue,
+    );
 
-    if (!comm) {
-      [comm] = await this.db
-        .insert(comms)
-        .values({
-          tenantId: this.permissionContext.tenantId!!,
-          type: data.type,
-          value,
-          canonicalValue,
-        })
-        .returning();
-    }
-
-    if (!comm) throw new Error("Failed to create or find comm");
-
-    // Check if link already exists
-    const [existingLink] = await this.db
-      .select()
-      .from(commsPeople)
-      .where(
-        and(
-          eq(commsPeople.tenantId, this.permissionContext.tenantId!),
-          eq(commsPeople.personId, personId),
-          eq(commsPeople.commId, comm.id)
-        )
-      )
-      .limit(1);
-
-    if (!existingLink) {
-      await this.addCommLink(personId, comm.id);
-    }
+    await this.ledger.linkCommPerson(
+      this.permissionContext.tenantId!,
+      comm.id,
+      personId,
+    );
 
     return comm;
   }
 
   static create(
-    drizzleClient: typeof db,
+    drizzleClient: DrizzleClient,
     userId: string,
     tenantId: string,
     userRole?: PermissionContext["userRole"],

@@ -6,7 +6,7 @@ import type {
   CompanyWithWeb,
   Comm,
   NewComm,
-} from "@db/ledger/types";
+} from "@/spaces/packages/workspace/types";
 
 type CompanyDomainInput = { domain: string; isPrimary?: boolean };
 type CompanyWebsiteInput = { url: string; type?: string; isPrimary?: boolean };

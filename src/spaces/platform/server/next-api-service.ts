@@ -15,7 +15,7 @@ import { TenantService } from "./tenant.service";
 import type { Tenant } from "@db/platform/types";
 import { userProfiles } from "@db/platform/schema";
 import { eq } from "drizzle-orm";
-import { resolveMemberContext } from "@/spaces/packages/workspace/server/member-context";
+import { resolveMemberContext } from "@/spaces/permissions/server/member-context";
 
 // Response types
 type ApiResponse<T = any> = {

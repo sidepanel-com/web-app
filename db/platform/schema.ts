@@ -2,6 +2,7 @@ import {
     pgSchema,
     uuid,
     text,
+    boolean,
     timestamp,
     uniqueIndex,
     foreignKey,
@@ -131,6 +132,29 @@ export const tenantInvitations = platform.table('tenant_invitations', {
         name: 'tenant_invitations_invited_by_fkey'
     }).onDelete('set null'),
 ]));
+
+/*
+ * Tenant Packages (which product packages are enabled per tenant)
+ */
+export const tenantPackages = platform.table(
+    'tenant_packages',
+    {
+        id: uuid('id').defaultRandom().primaryKey(),
+        tenantId: uuid('tenant_id').notNull(),
+        packageId: text('package_id').notNull(),
+        enabled: boolean('enabled').notNull().default(true),
+        createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+        updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull().$onUpdate(() => sql`now()`),
+    },
+    (t) => ([
+        uniqueIndex('tenant_packages_tenant_id_package_id_unique').on(t.tenantId, t.packageId),
+        foreignKey({
+            columns: [t.tenantId],
+            foreignColumns: [tenants.id],
+            name: 'tenant_packages_tenant_id_fkey',
+        }).onDelete('cascade'),
+    ])
+);
 
 /*
  * API Keys (tenant-scoped; only owners can create/list/revoke)

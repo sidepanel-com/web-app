@@ -2,14 +2,14 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useProductSdk } from "./use-product-sdk";
-import {
+import type {
   CompanyWithWeb,
   NewCompany,
   Person,
   NewPerson,
   Comm,
   NewComm,
-} from "@db/ledger/types";
+} from "@/spaces/packages/workspace/types";
 import { toast } from "sonner";
 
 type CompanyDomainInput = { domain: string; isPrimary?: boolean };

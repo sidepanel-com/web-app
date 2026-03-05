@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import type {
   OrgUnitMember,
   OrgUnitWithMemberCount,
-} from "@/spaces/packages/workspace/server/org-unit.service";
+} from "@/spaces/permissions/server/org-unit.service";
 import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
 
 export function useOrgUnits() {

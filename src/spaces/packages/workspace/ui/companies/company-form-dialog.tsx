@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/ui-primitives/ui/alert-dialog";
-import type { CompanyWithWeb, Person, Comm } from "@db/ledger/types";
+import type { CompanyWithWeb, Person, Comm } from "@/spaces/packages/workspace/types";
 import { Trash2, Plus, X, User, Star } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui-primitives/ui/tabs";
 import { Badge } from "@/ui-primitives/ui/badge";

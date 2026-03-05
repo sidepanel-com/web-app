@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -10,14 +10,14 @@ import {
 } from "@/ui-primitives/ui/card";
 import { Switch } from "@/ui-primitives/ui/switch";
 import { Badge } from "@/ui-primitives/ui/badge";
+import { usePlatformTenant } from "@/spaces/platform/contexts/platform-tenant.context";
 
-const packages = [
+const PACKAGE_CATALOG = [
   {
     id: "workspace",
     name: "Workspace",
     description:
       "Core package for managing people, companies, and communications. Powers the SidePanel experience.",
-    alwaysEnabled: true,
   },
   {
     id: "sales",
@@ -25,14 +25,67 @@ const packages = [
     description:
       "Pipeline management, deal tracking, and revenue forecasting.",
     comingSoon: true,
-    alwaysEnabled: false,
   },
 ] as const;
 
+interface PackageState {
+  packageId: string;
+  enabled: boolean;
+}
+
 export function PackagesSettings() {
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({
-    workspace: true,
-  });
+  const { tenant, reloadPackages } = usePlatformTenant();
+  const [states, setStates] = useState<PackageState[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const fetchStates = useCallback(async () => {
+    if (!tenant) return;
+    try {
+      const res = await fetch(`/api/tenants/${tenant.slug}/packages`, {
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      setStates(json.data as PackageState[]);
+    } finally {
+      setLoading(false);
+    }
+  }, [tenant]);
+
+  useEffect(() => {
+    fetchStates();
+  }, [fetchStates]);
+
+  const togglePackage = async (packageId: string, enabled: boolean) => {
+    if (!tenant) return;
+    setSaving(packageId);
+    try {
+      const res = await fetch(`/api/tenants/${tenant.slug}/packages`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packageId, enabled }),
+      });
+      if (res.ok) {
+        setStates((prev) => {
+          const exists = prev.some((s) => s.packageId === packageId);
+          if (exists) {
+            return prev.map((s) =>
+              s.packageId === packageId ? { ...s, enabled } : s,
+            );
+          }
+          return [...prev, { packageId, enabled }];
+        });
+        reloadPackages();
+      }
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const isEnabled = (packageId: string) =>
+    states.find((s) => s.packageId === packageId)?.enabled ?? true;
 
   return (
     <div className="space-y-6">
@@ -45,8 +98,8 @@ export function PackagesSettings() {
       </div>
 
       <div className="grid gap-4">
-        {packages.map((pkg) => {
-          const isEnabled = pkg.alwaysEnabled || enabled[pkg.id] || false;
+        {PACKAGE_CATALOG.map((pkg) => {
+          const enabled = isEnabled(pkg.id);
           const isComingSoon = "comingSoon" in pkg && pkg.comingSoon;
 
           return (
@@ -55,20 +108,15 @@ export function PackagesSettings() {
                 <div className="space-y-1">
                   <CardTitle className="text-base flex items-center gap-2">
                     {pkg.name}
-                    {pkg.alwaysEnabled && (
-                      <Badge variant="secondary">Core</Badge>
-                    )}
                     {isComingSoon && (
                       <Badge variant="outline">Coming Soon</Badge>
                     )}
                   </CardTitle>
                 </div>
                 <Switch
-                  checked={isEnabled}
-                  disabled={pkg.alwaysEnabled || isComingSoon}
-                  onCheckedChange={(checked) =>
-                    setEnabled((prev) => ({ ...prev, [pkg.id]: checked }))
-                  }
+                  checked={enabled}
+                  disabled={loading || isComingSoon || saving === pkg.id}
+                  onCheckedChange={(checked) => togglePackage(pkg.id, checked)}
                 />
               </CardHeader>
               <CardContent>

@@ -11,6 +11,7 @@ import { PlatformUserProvider } from "@/spaces/platform/contexts/platform-user.c
 import { PlatformTenantProvider } from "@/spaces/platform/contexts/platform-tenant.context";
 
 import { NoTenantSelected } from "@/spaces/platform/ui/entry/no-tenant-selected";
+import "@/spaces/packages/workspace/navigation";
 import "@/styles/globals.css";
 
 const DEBUG_MODE = true;

@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { createTenantClientSDK } from "@/spaces/platform/client-sdk";
 import type { TenantClientSDK } from "@/spaces/platform/client-sdk";
 import type { Tenant } from "@db/platform/types";
@@ -14,6 +20,8 @@ interface TenantContextType {
   isLoading: boolean;
   error: Error | null;
   reloadTenant: () => Promise<void>;
+  enabledPackageIds: string[] | null;
+  reloadPackages: () => Promise<void>;
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
@@ -32,6 +40,9 @@ export function PlatformTenantProvider({
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [enabledPackageIds, setEnabledPackageIds] = useState<string[] | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -102,9 +113,41 @@ export function PlatformTenantProvider({
     }
   };
 
+  const loadPackages = useCallback(async () => {
+    if (!tenant) {
+      setEnabledPackageIds(null);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/tenants/${tenant.slug}/packages`, {
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const ids = (json.data as { packageId: string; enabled: boolean }[])
+        .filter((p) => p.enabled)
+        .map((p) => p.packageId);
+      setEnabledPackageIds(ids);
+    } catch {
+      // Silently degrade — show all nav on error
+    }
+  }, [tenant]);
+
+  useEffect(() => {
+    loadPackages();
+  }, [loadPackages]);
+
   return (
     <TenantContext.Provider
-      value={{ tenant, tenantSdk, isLoading, error, reloadTenant }}
+      value={{
+        tenant,
+        tenantSdk,
+        isLoading,
+        error,
+        reloadTenant,
+        enabledPackageIds,
+        reloadPackages: loadPackages,
+      }}
     >
       {children}
     </TenantContext.Provider>

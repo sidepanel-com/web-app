@@ -4,7 +4,7 @@ import {
   PathTenantApiService,
   type TenantApiHandlers,
 } from "@/spaces/platform/server/next-api-service";
-import { MemberProfileService } from "@/spaces/packages/workspace/server/member-profile.service";
+import { MemberProfileService } from "@/spaces/permissions/server/member-profile.service";
 
 const schemas = {
   GET: z.object({}),

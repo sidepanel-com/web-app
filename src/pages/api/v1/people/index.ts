@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   V1ApiService,
   V1ApiHandlers,
-} from "@/spaces/packages/workspace/server/v1-api-service";
+} from "@/spaces/platform/server/v1-api-service";
 import { PeopleService } from "@/spaces/packages/workspace/server/people.service";
 import { TenantService } from "@/spaces/platform/server/tenant.service";
 
