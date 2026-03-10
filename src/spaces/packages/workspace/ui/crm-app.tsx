@@ -149,7 +149,7 @@ export function CrmApp() {
         </div>
       </Tabs>
 
-      <div className="border-t px-4 py-2 flex items-center justify-between bg-background">
+      <div className=" px-4 py-2 flex items-center justify-between bg-background">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <span className="font-semibold">SP</span>
           <span>SidePanel</span>
@@ -174,7 +174,7 @@ function Header({
   onLogout: () => void;
 }) {
   return (
-    <div className="px-4 py-3 space-y-3 border-b">
+    <div className="px-4 py-3 space-y-3 ">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -228,7 +228,7 @@ function Header({
 
 function TabBar() {
   return (
-    <div className="border-b bg-background sticky top-0 z-10">
+    <div className=" bg-background sticky top-0 z-10">
       <TabsList className="w-full flex h-auto bg-transparent border-none p-0 px-4 gap-1 rounded-none">
         <TabsTrigger
           value="activities"
