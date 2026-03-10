@@ -15,6 +15,13 @@
       "when": 1772502440481,
       "tag": "0001_spicy_kitty_pryde",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773136263693,
+      "tag": "0002_greedy_sebastian_shaw",
+      "breakpoints": true
     }
   ]
 }

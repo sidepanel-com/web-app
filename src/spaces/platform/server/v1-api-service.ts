@@ -5,9 +5,8 @@ import { createServerClient } from "@/spaces/identity/supabase.server-api";
 import { danger_supabaseAdmin } from "@/spaces/identity/supabase.server-admin";
 import { db } from "@/spaces/platform/server/db";
 import type { DrizzleClient } from "@/spaces/platform/server/db";
-import { TenantService } from "@/spaces/platform/server/tenant.service";
 import { ApiKeyService } from "@/spaces/platform/server/api-key.service";
-import { userProfiles, tenants } from "@db/platform/schema";
+import { tenants } from "@db/platform/schema";
 import { eq } from "drizzle-orm";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -16,10 +15,11 @@ import {
   SCOPE_PREFIX_TO_PACKAGE_ID,
   type V1Scope,
 } from "@/spaces/platform/server/v1-scopes";
-import { resolveMemberContext } from "@/spaces/permissions/server/member-context";
-import { PackageService } from "@/spaces/platform/server/package.service";
+import {
+  resolveSessionContext,
+  resolveApiKeyContext,
+} from "@/spaces/platform/server/request-context";
 
-// Response types
 type ApiResponse<T = unknown> = {
   success: boolean;
   data?: T;
@@ -97,38 +97,34 @@ export class V1ApiService<SM extends SchemaMap> {
         });
       }
 
-      // 1. Authenticate User (session or API key)
+      // Derive package ID from route scope (used in context resolution)
+      const routePath = req.url?.split("?")[0] ?? "";
+      const routeScope = getRequiredScopeForRoute(method as HttpMethod, routePath);
+      const scopePrefix = routeScope?.split(":")[0];
+      const packageId = scopePrefix
+        ? SCOPE_PREFIX_TO_PACKAGE_ID[scopePrefix]
+        : undefined;
+
       let authType: "session" | "api_key" = "session";
-      let profile: { id: string; userId: string; email: string; displayName: string | null };
-      let tenant: { id: string; slug: string };
-      let userRole: "owner" | "admin" | "member" | "viewer" | null = null;
       let apiKeyScopes: string[] | undefined;
+      let contextResult: Awaited<ReturnType<typeof resolveSessionContext>>;
 
       const {
         data: { user },
       } = await supabaseClient.auth.getUser();
 
       if (user) {
-        const [p] = await db
-          .select()
-          .from(userProfiles)
-          .where(eq(userProfiles.userId, user.id))
-          .limit(1);
-        if (!p) {
-          return res
-            .status(403)
-            .json({ success: false, error: "User profile not found" });
-        }
-        profile = p;
-        const tenantService = TenantService.create(db, user.id);
-        const t = await tenantService.getTenantBySlug(tenantSlug);
-        if (!t) {
+        contextResult = await resolveSessionContext(
+          db,
+          user.id,
+          tenantSlug,
+          packageId,
+        );
+        if (!contextResult) {
           return res
             .status(404)
             .json({ success: false, error: "Tenant not found or access denied" });
         }
-        tenant = { id: t.id, slug: t.slug };
-        userRole = await tenantService.getUserRoleInTenant(t.id);
       } else {
         authType = "api_key";
         const bearer =
@@ -143,6 +139,7 @@ export class V1ApiService<SM extends SchemaMap> {
         if (!lookup) {
           return res.status(401).json({ success: false, error: "Invalid API key" });
         }
+
         const [t] = await db
           .select({ id: tenants.id, slug: tenants.slug })
           .from(tenants)
@@ -154,40 +151,25 @@ export class V1ApiService<SM extends SchemaMap> {
             error: "API key is not valid for this tenant",
           });
         }
-        tenant = t;
+
         apiKeyScopes = lookup.scopes;
-        const [p] = await db
-          .select()
-          .from(userProfiles)
-          .where(eq(userProfiles.id, lookup.profileId))
-          .limit(1);
-        if (!p) {
+        contextResult = await resolveApiKeyContext(
+          db,
+          lookup.profileId,
+          t.id,
+          t.slug,
+          packageId,
+        );
+        if (!contextResult) {
           return res
             .status(403)
             .json({ success: false, error: "User profile not found" });
         }
-        profile = p;
       }
 
-      const apiUser: ApiUser = {
-        supabaseUserId: profile.userId,
-        profileId: profile.id,
-        email: profile.email,
-        name: profile.displayName || "",
-        authType,
-      };
-
       // Scope enforcement for API key requests
-      if (authType === "api_key" && apiKeyScopes) {
-        const path = req.url?.split("?")[0] ?? "";
-        const requiredScope = getRequiredScopeForRoute(
-          method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
-          path
-        );
-        if (
-          requiredScope &&
-          !scopesInclude(apiKeyScopes, requiredScope as V1Scope)
-        ) {
+      if (authType === "api_key" && apiKeyScopes && routeScope) {
+        if (!scopesInclude(apiKeyScopes, routeScope as V1Scope)) {
           return res.status(403).json({
             success: false,
             error: "Insufficient scope for this request",
@@ -195,30 +177,23 @@ export class V1ApiService<SM extends SchemaMap> {
         }
       }
 
-      // Package enablement check — derive package from route scope
-      {
-        const routePath = req.url?.split("?")[0] ?? "";
-        const routeScope = getRequiredScopeForRoute(method as HttpMethod, routePath);
-        if (routeScope) {
-          const scopePrefix = routeScope.split(":")[0];
-          const packageId = scopePrefix ? SCOPE_PREFIX_TO_PACKAGE_ID[scopePrefix] : undefined;
-          if (packageId) {
-            const packageService = new PackageService(db);
-            const enabled = await packageService.isPackageEnabled(tenant.id, packageId);
-            if (!enabled) {
-              return res.status(403).json({
-                success: false,
-                error: `Package "${packageId}" is disabled for this tenant`,
-              });
-            }
-          }
-        }
+      // Package enablement (already resolved in the context query)
+      if (!contextResult.packageEnabled) {
+        return res.status(403).json({
+          success: false,
+          error: `Package "${packageId}" is disabled for this tenant`,
+        });
       }
 
-      // 3. Resolve member context (permission-layer identity)
-      const memberContext = await resolveMemberContext(db, tenant.id, profile.id);
+      const apiUser: ApiUser = {
+        supabaseUserId: contextResult.userId,
+        profileId: contextResult.profileId,
+        email: contextResult.email,
+        name: contextResult.displayName || "",
+        authType,
+      };
 
-      // 4. Parse & Validate Request Data
+      // Parse & Validate Request Data
       let requestData: unknown;
       const schema = this.schemas?.[method];
       try {
@@ -232,19 +207,18 @@ export class V1ApiService<SM extends SchemaMap> {
         throw err;
       }
 
-      // 5. Run Handler
       const utils: V1ApiUtilities<unknown> = {
         supabaseUserClient: supabaseClient,
         dangerSupabaseAdmin: danger_supabaseAdmin,
         db: db,
         requestData,
         apiUser,
-        tenantId: tenant.id,
-        tenantSlug: tenant.slug,
-        userRole,
-        memberProfileId: memberContext.memberProfileId,
-        orgUnitIds: memberContext.orgUnitIds,
-        orgUnitPaths: memberContext.orgUnitPaths,
+        tenantId: contextResult.tenantId,
+        tenantSlug: contextResult.tenantSlug,
+        userRole: contextResult.userRole,
+        memberProfileId: contextResult.memberProfileId,
+        orgUnitIds: contextResult.orgUnitIds,
+        orgUnitPaths: contextResult.orgUnitPaths,
         apiKeyScopes,
         handleValidationError: (err: ZodError) =>
           res.status(400).json({ success: false, error: err.message }),

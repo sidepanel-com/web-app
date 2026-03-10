@@ -8,6 +8,7 @@ import {
   companyDomains,
   companyWebsites,
 } from "@db/ledger/schema";
+import { workspacePersonProfiles } from "@db/packages/schema";
 import {
   normalizeComm,
   type CommType,
@@ -18,6 +19,7 @@ import {
   tryNormalizeWebsiteUrl,
 } from "@/spaces/packages/workspace/lib/company-validation";
 import { WorkspaceService } from "@/spaces/packages/workspace/server/workspace-service";
+import { ActivitiesService } from "@/spaces/packages/workspace/server/activities.service";
 import type {
   PermissionContext,
   DrizzleClient,
@@ -30,11 +32,22 @@ import type {
   CompanyDomain,
   CompanyWebsite,
   CompanyWithWeb,
+  WorkspacePersonProfile,
+  ActivityDTO,
 } from "@/spaces/packages/workspace/types";
 
 type PersonUpdate = Partial<
   Omit<Person, "id" | "tenantId" | "createdAt" | "updatedAt">
 >;
+
+export type PersonDetailResult = Person & {
+  title: string | null;
+  companies: CompanyWithWeb[];
+  companyRoles: { companyId: string; role: string | null; isPrimary: boolean | null }[];
+  comms: Comm[];
+  projection: WorkspacePersonProfile | null;
+  recentActivities: ActivityDTO[];
+};
 
 type CompanyCreateInput = Omit<
   NewCompany,
@@ -143,7 +156,7 @@ export class PeopleService extends WorkspaceService {
 
   async getPersonById(
     id: string
-  ): Promise<(Person & { companies: CompanyWithWeb[]; comms: Comm[] }) | null> {
+  ): Promise<PersonDetailResult | null> {
     if (!this.permissionContext.tenantId!) {
       throw new Error("Tenant ID is required to fetch a person");
     }
@@ -153,36 +166,41 @@ export class PeopleService extends WorkspaceService {
     }
 
     const _scope = this.getScope();
+    const tenantId = this.permissionContext.tenantId!;
 
     const [person] = await this.db
       .select()
       .from(people)
-      .where(
-        and(
-          eq(people.id, id),
-          eq(people.tenantId, this.permissionContext.tenantId!)
-        )
-      );
+      .where(and(eq(people.id, id), eq(people.tenantId, tenantId)));
 
     if (!person) return null;
 
     const personCompaniesList = await this.db
       .select({
         company: companies,
+        role: peopleCompanies.role,
+        isPrimary: peopleCompanies.isPrimary,
       })
       .from(peopleCompanies)
       .innerJoin(companies, eq(peopleCompanies.companyId, companies.id))
       .where(
         and(
-          eq(peopleCompanies.tenantId, this.permissionContext.tenantId!),
-          eq(peopleCompanies.personId, id)
-        )
+          eq(peopleCompanies.tenantId, tenantId),
+          eq(peopleCompanies.personId, id),
+        ),
       );
 
     const linkedCompanies = personCompaniesList.map((pc) => pc.company);
     const companyIds = linkedCompanies.map((c) => c.id);
+    const companyRoles = personCompaniesList.map((pc) => ({
+      companyId: pc.company.id,
+      role: pc.role,
+      isPrimary: pc.isPrimary,
+    }));
 
-    const [domains, websites] =
+    const primaryLink = companyRoles.find((r) => r.isPrimary) ?? companyRoles[0];
+
+    const [domainRows, websiteRows] =
       companyIds.length > 0
         ? await Promise.all([
             this.db
@@ -190,60 +208,81 @@ export class PeopleService extends WorkspaceService {
               .from(companyDomains)
               .where(
                 and(
-                  eq(companyDomains.tenantId, this.permissionContext.tenantId!),
-                  inArray(companyDomains.companyId, companyIds)
-                )
+                  eq(companyDomains.tenantId, tenantId),
+                  inArray(companyDomains.companyId, companyIds),
+                ),
               ),
             this.db
               .select()
               .from(companyWebsites)
               .where(
                 and(
-                  eq(
-                    companyWebsites.tenantId,
-                    this.permissionContext.tenantId!
-                  ),
-                  inArray(companyWebsites.companyId, companyIds)
-                )
+                  eq(companyWebsites.tenantId, tenantId),
+                  inArray(companyWebsites.companyId, companyIds),
+                ),
               ),
           ])
         : [[], []];
 
     const domainsByCompany = new Map<string, CompanyDomain[]>();
-    for (const d of domains as CompanyDomain[]) {
+    for (const d of domainRows as CompanyDomain[]) {
       const arr = domainsByCompany.get(d.companyId) ?? [];
       arr.push(d);
       domainsByCompany.set(d.companyId, arr);
     }
 
     const websitesByCompany = new Map<string, CompanyWebsite[]>();
-    for (const w of websites as CompanyWebsite[]) {
+    for (const w of websiteRows as CompanyWebsite[]) {
       const arr = websitesByCompany.get(w.companyId) ?? [];
       arr.push(w);
       websitesByCompany.set(w.companyId, arr);
     }
 
     const personCommsList = await this.db
-      .select({
-        comm: comms,
-      })
+      .select({ comm: comms })
       .from(commsPeople)
       .innerJoin(comms, eq(commsPeople.commId, comms.id))
       .where(
-        and(
-          eq(commsPeople.tenantId, this.permissionContext.tenantId!),
-          eq(commsPeople.personId, id)
-        )
+        and(eq(commsPeople.tenantId, tenantId), eq(commsPeople.personId, id)),
       );
+
+    const [profile] = await this.db
+      .select()
+      .from(workspacePersonProfiles)
+      .where(
+        and(
+          eq(workspacePersonProfiles.tenantId, tenantId),
+          eq(workspacePersonProfiles.personId, id),
+        ),
+      );
+
+    const activitiesService = ActivitiesService.create(
+      this.db,
+      this.permissionContext.userId,
+      tenantId,
+      this.permissionContext.userRole,
+      this.permissionContext.memberProfileId ?? null,
+      this.permissionContext.orgUnitIds,
+      this.permissionContext.orgUnitPaths,
+    );
+
+    const recentActivities = await activitiesService.getActivities({
+      personId: id,
+      limit: 10,
+    });
 
     return {
       ...person,
+      title: primaryLink?.role ?? null,
       companies: linkedCompanies.map((c) => ({
         ...c,
         domains: domainsByCompany.get(c.id) ?? [],
         websites: websitesByCompany.get(c.id) ?? [],
       })),
+      companyRoles,
       comms: personCommsList.map((pc) => pc.comm),
+      projection: profile ?? null,
+      recentActivities: recentActivities.activities,
     };
   }
 
@@ -387,6 +426,46 @@ export class PeopleService extends WorkspaceService {
     );
 
     return comm;
+  }
+
+  async updateProjection(
+    personId: string,
+    data: {
+      ownerMemberProfileId?: string | null;
+      ownerOrgUnitId?: string | null;
+      status?: string | null;
+      isVip?: boolean;
+    },
+  ): Promise<WorkspacePersonProfile> {
+    const tenantId = this.permissionContext.tenantId!;
+    if (!tenantId) throw new Error("Tenant ID is required");
+    if (!(await this.canUpdate(personId)))
+      throw new Error("Insufficient permissions");
+
+    const [existing] = await this.db
+      .select()
+      .from(workspacePersonProfiles)
+      .where(
+        and(
+          eq(workspacePersonProfiles.tenantId, tenantId),
+          eq(workspacePersonProfiles.personId, personId),
+        ),
+      );
+
+    if (existing) {
+      const [updated] = await this.db
+        .update(workspacePersonProfiles)
+        .set(data)
+        .where(eq(workspacePersonProfiles.id, existing.id))
+        .returning();
+      return updated!;
+    }
+
+    const [created] = await this.db
+      .insert(workspacePersonProfiles)
+      .values({ tenantId, personId, ...data, isVip: data.isVip ?? false })
+      .returning();
+    return created!;
   }
 
   static create(

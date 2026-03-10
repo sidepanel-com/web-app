@@ -6,6 +6,8 @@ It separates **reality** from **business interpretation**. The ledger captures w
 
 **Stack:** Next.js (Pages Router), Drizzle ORM, Supabase (Auth only), PostgreSQL
 
+For implementation-level data access patterns and permission flow, see [architecture-data-flow.md](architecture-data-flow.md).
+
 ---
 
 ## Layer Model

@@ -9,6 +9,15 @@ import {
   commsCompanies,
   companyDomains,
   companyWebsites,
+  emails,
+  emailComms,
+  meetings,
+  meetingsComms,
+  calls,
+  callComms,
+  messages,
+  messageComms,
+  activities,
 } from "@db/ledger/schema";
 import type {
   Person,
@@ -18,6 +27,11 @@ import type {
   CompanyDomain,
   CompanyWebsite,
   CompanyWithWeb,
+  Email,
+  Meeting,
+  Call,
+  Message,
+  Activity,
 } from "@db/ledger/types";
 
 type PersonUpdate = Partial<
@@ -388,5 +402,147 @@ export class LedgerWriteService {
           eq(commsCompanies.commId, commId),
         ),
       );
+  }
+
+  /* ===================== Emails ===================== */
+
+  async insertEmail(
+    tenantId: string,
+    data: { subject?: string; body?: string; externalId?: string; occurredAt: string },
+  ): Promise<Email> {
+    const [row] = await this.db
+      .insert(emails)
+      .values({ ...data, tenantId })
+      .returning();
+    if (!row) throw new Error("Failed to insert email");
+    return row;
+  }
+
+  async linkEmailComm(
+    tenantId: string,
+    emailId: string,
+    commId: string,
+    role?: string,
+  ): Promise<void> {
+    await this.db.insert(emailComms).values({ tenantId, emailId, commId, role });
+  }
+
+  /* ===================== Meetings ===================== */
+
+  async insertMeeting(
+    tenantId: string,
+    data: {
+      icalUid: string;
+      ownerCommId: string;
+      title?: string;
+      description?: string;
+      startAt: string;
+      endAt: string;
+    },
+  ): Promise<Meeting> {
+    const [row] = await this.db
+      .insert(meetings)
+      .values({ ...data, tenantId })
+      .returning();
+    if (!row) throw new Error("Failed to insert meeting");
+    return row;
+  }
+
+  async linkMeetingComm(
+    tenantId: string,
+    meetingId: string,
+    commId: string,
+    role?: string,
+    responseStatus?: string,
+  ): Promise<void> {
+    await this.db
+      .insert(meetingsComms)
+      .values({ tenantId, meetingId, commId, role, responseStatus });
+  }
+
+  /* ===================== Calls ===================== */
+
+  async insertCall(
+    tenantId: string,
+    data: {
+      externalId?: string;
+      durationSeconds?: string;
+      recordingUrl?: string;
+      occurredAt: string;
+    },
+  ): Promise<Call> {
+    const [row] = await this.db
+      .insert(calls)
+      .values({ ...data, tenantId })
+      .returning();
+    if (!row) throw new Error("Failed to insert call");
+    return row;
+  }
+
+  async linkCallComm(
+    tenantId: string,
+    callId: string,
+    commId: string,
+    role?: string,
+  ): Promise<void> {
+    await this.db.insert(callComms).values({ tenantId, callId, commId, role });
+  }
+
+  /* ===================== Messages ===================== */
+
+  async insertMessage(
+    tenantId: string,
+    data: { body?: string; externalId?: string; occurredAt: string },
+  ): Promise<Message> {
+    const [row] = await this.db
+      .insert(messages)
+      .values({ ...data, tenantId })
+      .returning();
+    if (!row) throw new Error("Failed to insert message");
+    return row;
+  }
+
+  async linkMessageComm(
+    tenantId: string,
+    messageId: string,
+    commId: string,
+    role?: string,
+  ): Promise<void> {
+    await this.db
+      .insert(messageComms)
+      .values({ tenantId, messageId, commId, role });
+  }
+
+  /* ===================== Activities ===================== */
+
+  async insertActivity(
+    tenantId: string,
+    data: {
+      type: string;
+      sourceId?: string;
+      actorCommId?: string;
+      actorPersonId?: string;
+      occurredAt: string;
+      accessLevel?: string;
+      metadata?: unknown;
+    },
+  ): Promise<Activity> {
+    const [row] = await this.db
+      .insert(activities)
+      .values({
+        tenantId,
+        type: data.type as typeof activities.type.enumValues[number],
+        sourceId: data.sourceId,
+        actorCommId: data.actorCommId,
+        actorPersonId: data.actorPersonId,
+        occurredAt: data.occurredAt,
+        accessLevel:
+          (data.accessLevel as typeof activities.accessLevel.enumValues[number]) ??
+          "internal",
+        metadata: data.metadata,
+      })
+      .returning();
+    if (!row) throw new Error("Failed to insert activity");
+    return row;
   }
 }

@@ -13,7 +13,7 @@ export const SCOPE_PREFIX_TO_PACKAGE_ID: Record<string, string> = {
   [PACKAGE_COMMS]: "workspace",
 };
 
-/** Comms package scopes (current product). Expand when adding emails, meetings, calls, messages. */
+/** Comms package scopes (current product). */
 export const V1_SCOPES = {
   // People
   COMMS_PEOPLE_READ: `${PACKAGE_COMMS}:people:read`,
@@ -24,6 +24,11 @@ export const V1_SCOPES = {
   // Comms (contact methods)
   COMMS_COMMS_READ: `${PACKAGE_COMMS}:comms:read`,
   COMMS_COMMS_WRITE: `${PACKAGE_COMMS}:comms:write`,
+  // Activities
+  COMMS_ACTIVITIES_READ: `${PACKAGE_COMMS}:activities:read`,
+  COMMS_ACTIVITIES_WRITE: `${PACKAGE_COMMS}:activities:write`,
+  // Search
+  COMMS_SEARCH_READ: `${PACKAGE_COMMS}:search:read`,
 } as const;
 
 export type V1Scope = (typeof V1_SCOPES)[keyof typeof V1_SCOPES];
@@ -33,12 +38,15 @@ export const COMMS_SCOPES_READ: V1Scope[] = [
   V1_SCOPES.COMMS_PEOPLE_READ,
   V1_SCOPES.COMMS_COMPANIES_READ,
   V1_SCOPES.COMMS_COMMS_READ,
+  V1_SCOPES.COMMS_ACTIVITIES_READ,
+  V1_SCOPES.COMMS_SEARCH_READ,
 ];
 
 export const COMMS_SCOPES_WRITE: V1Scope[] = [
   V1_SCOPES.COMMS_PEOPLE_WRITE,
   V1_SCOPES.COMMS_COMPANIES_WRITE,
   V1_SCOPES.COMMS_COMMS_WRITE,
+  V1_SCOPES.COMMS_ACTIVITIES_WRITE,
 ];
 
 export const COMMS_SCOPES_FULL: V1Scope[] = [
@@ -87,6 +95,10 @@ const ROUTE_SCOPE_MAP: Record<string, V1Scope> = {
   "DELETE/api/v1/companies/:id/people": V1_SCOPES.COMMS_COMPANIES_WRITE,
   "POST/api/v1/companies/:id/comms": V1_SCOPES.COMMS_COMPANIES_WRITE,
   "DELETE/api/v1/companies/:id/comms": V1_SCOPES.COMMS_COMPANIES_WRITE,
+  "GET/api/v1/activities": V1_SCOPES.COMMS_ACTIVITIES_READ,
+  "GET/api/v1/activities/:id": V1_SCOPES.COMMS_ACTIVITIES_READ,
+  "POST/api/v1/activities": V1_SCOPES.COMMS_ACTIVITIES_WRITE,
+  "GET/api/v1/search": V1_SCOPES.COMMS_SEARCH_READ,
 };
 
 /**

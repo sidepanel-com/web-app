@@ -8,6 +8,7 @@ import {
   companyDomains,
   companyWebsites,
 } from "@db/ledger/schema";
+import { workspaceCompanyProfiles } from "@db/packages/schema";
 import {
   normalizeComm,
   type CommType,
@@ -18,6 +19,7 @@ import {
   tryNormalizeWebsiteUrl,
 } from "@/spaces/packages/workspace/lib/company-validation";
 import { WorkspaceService } from "@/spaces/packages/workspace/server/workspace-service";
+import { ActivitiesService } from "@/spaces/packages/workspace/server/activities.service";
 import type {
   PermissionContext,
   DrizzleClient,
@@ -30,11 +32,21 @@ import type {
   CompanyDomain,
   CompanyWebsite,
   CompanyWithWeb,
+  WorkspaceCompanyProfile,
+  ActivityDTO,
 } from "@/spaces/packages/workspace/types";
 
 type CompanyUpdate = Partial<
   Omit<Company, "id" | "tenantId" | "createdAt" | "updatedAt">
 >;
+
+export type CompanyDetailResult = CompanyWithWeb & {
+  people: (Person & { role: string | null })[];
+  comms: Comm[];
+  contactCount: number;
+  projection: WorkspaceCompanyProfile | null;
+  recentActivities: ActivityDTO[];
+};
 
 type CompanyCreateInput = Omit<
   NewCompany,
@@ -196,8 +208,9 @@ export class CompaniesService extends WorkspaceService {
 
   async getCompanyById(
     id: string
-  ): Promise<(CompanyWithWeb & { people: Person[]; comms: Comm[] }) | null> {
-    if (!this.permissionContext.tenantId!) {
+  ): Promise<CompanyDetailResult | null> {
+    const tenantId = this.permissionContext.tenantId!;
+    if (!tenantId) {
       throw new Error("Tenant ID is required to fetch a company");
     }
 
@@ -210,68 +223,93 @@ export class CompaniesService extends WorkspaceService {
     const [company] = await this.db
       .select()
       .from(companies)
-      .where(
-        and(
-          eq(companies.id, id),
-          eq(companies.tenantId, this.permissionContext.tenantId!)
-        )
-      );
+      .where(and(eq(companies.id, id), eq(companies.tenantId, tenantId)));
 
     if (!company) return null;
 
-    const [domains, websites] = await Promise.all([
+    const [domainRows, websiteRows] = await Promise.all([
       this.db
         .select()
         .from(companyDomains)
         .where(
           and(
-            eq(companyDomains.tenantId, this.permissionContext.tenantId!),
-            eq(companyDomains.companyId, id)
-          )
+            eq(companyDomains.tenantId, tenantId),
+            eq(companyDomains.companyId, id),
+          ),
         ),
       this.db
         .select()
         .from(companyWebsites)
         .where(
           and(
-            eq(companyWebsites.tenantId, this.permissionContext.tenantId!),
-            eq(companyWebsites.companyId, id)
-          )
+            eq(companyWebsites.tenantId, tenantId),
+            eq(companyWebsites.companyId, id),
+          ),
         ),
     ]);
 
     const companyPeopleList = await this.db
       .select({
         person: people,
+        role: peopleCompanies.role,
       })
       .from(peopleCompanies)
       .innerJoin(people, eq(peopleCompanies.personId, people.id))
       .where(
         and(
-          eq(peopleCompanies.tenantId, this.permissionContext.tenantId!),
-          eq(peopleCompanies.companyId, id)
-        )
+          eq(peopleCompanies.tenantId, tenantId),
+          eq(peopleCompanies.companyId, id),
+        ),
       );
 
     const companyCommsList = await this.db
-      .select({
-        comm: comms,
-      })
+      .select({ comm: comms })
       .from(commsCompanies)
       .innerJoin(comms, eq(commsCompanies.commId, comms.id))
       .where(
         and(
-          eq(commsCompanies.tenantId, this.permissionContext.tenantId!),
-          eq(commsCompanies.companyId, id)
-        )
+          eq(commsCompanies.tenantId, tenantId),
+          eq(commsCompanies.companyId, id),
+        ),
       );
+
+    const [profile] = await this.db
+      .select()
+      .from(workspaceCompanyProfiles)
+      .where(
+        and(
+          eq(workspaceCompanyProfiles.tenantId, tenantId),
+          eq(workspaceCompanyProfiles.companyId, id),
+        ),
+      );
+
+    const activitiesService = ActivitiesService.create(
+      this.db,
+      this.permissionContext.userId,
+      tenantId,
+      this.permissionContext.userRole,
+      this.permissionContext.memberProfileId ?? null,
+      this.permissionContext.orgUnitIds,
+      this.permissionContext.orgUnitPaths,
+    );
+
+    const recentActivities = await activitiesService.getActivities({
+      companyId: id,
+      limit: 10,
+    });
 
     return {
       ...company,
-      domains,
-      websites,
-      people: companyPeopleList.map((cp) => cp.person),
+      domains: domainRows,
+      websites: websiteRows,
+      people: companyPeopleList.map((cp) => ({
+        ...cp.person,
+        role: cp.role,
+      })),
       comms: companyCommsList.map((cc) => cc.comm),
+      contactCount: companyPeopleList.length,
+      projection: profile ?? null,
+      recentActivities: recentActivities.activities,
     };
   }
 
@@ -441,6 +479,45 @@ export class CompaniesService extends WorkspaceService {
     );
 
     return comm;
+  }
+
+  async updateProjection(
+    companyId: string,
+    data: {
+      ownerMemberProfileId?: string | null;
+      ownerOrgUnitId?: string | null;
+      status?: string | null;
+    },
+  ): Promise<WorkspaceCompanyProfile> {
+    const tenantId = this.permissionContext.tenantId!;
+    if (!tenantId) throw new Error("Tenant ID is required");
+    if (!(await this.canUpdate(companyId)))
+      throw new Error("Insufficient permissions");
+
+    const [existing] = await this.db
+      .select()
+      .from(workspaceCompanyProfiles)
+      .where(
+        and(
+          eq(workspaceCompanyProfiles.tenantId, tenantId),
+          eq(workspaceCompanyProfiles.companyId, companyId),
+        ),
+      );
+
+    if (existing) {
+      const [updated] = await this.db
+        .update(workspaceCompanyProfiles)
+        .set(data)
+        .where(eq(workspaceCompanyProfiles.id, existing.id))
+        .returning();
+      return updated!;
+    }
+
+    const [created] = await this.db
+      .insert(workspaceCompanyProfiles)
+      .values({ tenantId, companyId, ...data })
+      .returning();
+    return created!;
   }
 
   static create(

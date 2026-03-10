@@ -11,6 +11,7 @@ Code-level patterns and usage live in local READMEs (e.g., `src/spaces/packages/
 | File | Role |
 |---|---|
 | [architecture.md](architecture.md) | System layers, ownership boundaries, data flow |
+| [architecture-data-flow.md](architecture-data-flow.md) | Implementation-level data access and permission flow across layers |
 | [architecture-remediation.md](architecture-remediation.md) | Phased plan to align codebase with the layer model |
 | [glossary.md](glossary.md) | Canonical terminology |
 
